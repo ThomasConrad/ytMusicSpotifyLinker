@@ -12,14 +12,14 @@ use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
     users::Backend,
-    web::{auth, protected},
+    api::{auth, protected},
 };
 
-pub struct App {
+pub struct Router {
     db: SqlitePool,
 }
 
-impl App {
+impl Router {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let db = SqlitePool::connect(":memory:").await?;
         sqlx::migrate!().run(&db).await?;

@@ -5,10 +5,9 @@
 //! ```
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::web::App;
-
+use crate::api::Router;
 mod users;
-mod web;
+mod api;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,5 +18,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .try_init()?;
 
-    App::new().await?.serve().await
+    Router::new().await?.serve().await
 }
