@@ -3,14 +3,22 @@
 //! ```not_rust
 //! cargo run -p example-sqlite
 //! ```
+use sqlx::SqlitePool;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::api::Router;
-mod users;
+use crate::app::Watcher;
+
 mod api;
+mod app;
+mod users;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = "sqlite://./db.sqlite";
+    let db = SqlitePool::connect(db_path).await?;
+    sqlx::migrate!().run(&db).await?;
+
     tracing_subscriber::registry()
         .with(EnvFilter::new(std::env::var("RUST_LOG").unwrap_or_else(
             |_| "axum_login=debug,tower_sessions=debug,sqlx=warn,tower_http=debug".into(),
@@ -18,5 +26,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .try_init()?;
 
-    Router::new().await?.serve().await
+    let app = Watcher::new().await?;
+    Router::new(db.clone(), app).await?.serve().await
 }

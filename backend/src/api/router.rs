@@ -11,20 +11,19 @@ use tower_sessions::cookie::Key;
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
-    users::Backend,
     api::{auth, protected},
+    app::Watcher,
+    users::Backend,
 };
 
 pub struct Router {
     db: SqlitePool,
+    app: Watcher,
 }
 
 impl Router {
-    pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let db = SqlitePool::connect(":memory:").await?;
-        sqlx::migrate!().run(&db).await?;
-
-        Ok(Self { db })
+    pub async fn new(pool: SqlitePool, app: Watcher) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self { db: pool, app })
     }
 
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error>> {
