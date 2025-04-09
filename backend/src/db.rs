@@ -80,6 +80,7 @@ impl SledDb {
     }
 
     /// Flush the database to disk
+    #[allow(dead_code)] // Will be used in future implementations
     pub fn flush(&self) -> Result<(), DbError> {
         self.db.flush()?;
         Ok(())

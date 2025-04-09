@@ -17,6 +17,7 @@ use crate::{
 
 pub struct Router {
     db: SledDb,
+    #[allow(dead_code)] // Will be used in future implementations
     app: Watcher,
 }
 

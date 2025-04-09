@@ -1,6 +1,7 @@
 use crate::app::songlink::SonglinkClient;
 
 pub struct Watcher {
+    #[allow(dead_code)] // Will be used in future implementations
     songlink_client: SonglinkClient,
 }
 
