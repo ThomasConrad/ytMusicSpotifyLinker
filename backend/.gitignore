@@ -1,2 +1,6 @@
 /target
 .env
+
+# Sled database files
+/db.sled/
+*.sled
