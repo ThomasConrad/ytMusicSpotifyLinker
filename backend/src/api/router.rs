@@ -11,6 +11,7 @@ use tower_sessions::cookie::Key;
 use crate::{
     api::{auth, protected},
     app::Watcher,
+    config::AppConfig,
     db::{session_store::SledStore, SledDb},
     users::Backend,
 };
@@ -19,11 +20,12 @@ pub struct Router {
     db: SledDb,
     #[allow(dead_code)] // Will be used in future implementations
     app: Watcher,
+    config: AppConfig,
 }
 
 impl Router {
-    pub async fn new(db: SledDb, app: Watcher) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self { db, app })
+    pub async fn new(db: SledDb, app: Watcher, config: AppConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self { db, app, config })
     }
 
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error>> {
@@ -64,7 +66,10 @@ impl Router {
             .layer(MessagesManagerLayer)
             .layer(auth_layer.clone());
 
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        let bind_address = self.config.bind_address();
+        let listener = tokio::net::TcpListener::bind(&bind_address)
+            .await
+            .unwrap_or_else(|_| panic!("Failed to bind to {}", bind_address));
 
         // Ensure we use a shutdown signal to abort the deletion task.
         axum::serve(listener, app.into_make_service())
