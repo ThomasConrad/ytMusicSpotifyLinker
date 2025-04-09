@@ -1,4 +1,4 @@
-use crate::app::songlink::{LinksResponse, SonglinkClient};
+use crate::app::songlink::SonglinkClient;
 
 pub struct Watcher {
     songlink_client: SonglinkClient,

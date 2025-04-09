@@ -1,29 +1,28 @@
 use axum_login::{
     login_required,
-    tower_sessions::{ExpiredDeletion, Expiry, SessionManagerLayer},
+    tower_sessions::{Expiry, SessionManagerLayer},
     AuthManagerLayerBuilder,
 };
 use axum_messages::MessagesManagerLayer;
-use sqlx::SqlitePool;
 use time::Duration;
 use tokio::{signal, task::AbortHandle};
 use tower_sessions::cookie::Key;
-use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
     api::{auth, protected},
     app::Watcher,
+    db::{session_store::SledStore, SledDb},
     users::Backend,
 };
 
 pub struct Router {
-    db: SqlitePool,
+    db: SledDb,
     app: Watcher,
 }
 
 impl Router {
-    pub async fn new(pool: SqlitePool, app: Watcher) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self { db: pool, app })
+    pub async fn new(db: SledDb, app: Watcher) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self { db, app })
     }
 
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error>> {
@@ -31,7 +30,7 @@ impl Router {
         //
         // This uses `tower-sessions` to establish a layer that will provide the session
         // as a request extension.
-        let session_store = SqliteStore::new(self.db.clone());
+        let session_store = SledStore::new(self.db.clone());
         session_store.migrate().await?;
 
         let deletion_task = tokio::task::spawn(
@@ -52,14 +51,17 @@ impl Router {
         //
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
-        let backend = Backend::new(self.db);
+        let backend = Backend::new(self.db.clone());
+        // Initialize backend with test user
+        backend.initialize().await?;
+
         let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
         let app = protected::router()
             .route_layer(login_required!(Backend, login_url = "/login"))
             .merge(auth::router())
             .layer(MessagesManagerLayer)
-            .layer(auth_layer);
+            .layer(auth_layer.clone());
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 

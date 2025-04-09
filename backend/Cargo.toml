@@ -13,15 +13,19 @@ http = "1.0.0"
 hyper = "1.0.1"
 password-auth = "1.0.0"
 serde = "1"
-sqlx = { version = "0.8.1", features = ["sqlite", "time", "runtime-tokio"] }
+# Remove SQLite in favor of sled
+# sqlx = { version = "0.8.1", features = ["sqlite", "time", "runtime-tokio"] }
+sled = "0.34.7"
 time = "0.3.39"
 tokio = { version = "1.44.0", features = ["full"] }
 tower = "0.5.2"
+tracing = "0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tower-sessions = { version = "0.14.0", default-features = false, features = [
   "signed",
 ] }
-tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
+# Replace with our own sled-store implementation
+# tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
 thiserror = "2.0"
 async-trait = "0.1"
 anyhow = "1.0.97"
@@ -29,3 +33,4 @@ reqwest = { version = "0.12.14", features = ["json"] }
 serde_json = "1.0.140"
 httpmock = "0.7.0"
 url = "2.5.4"
+bincode = "1.3.3" # For serializing data
