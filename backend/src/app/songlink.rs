@@ -231,7 +231,7 @@ pub enum APIProvider {
 mod tests {
     use super::*;
     use httpmock::{Method::GET, MockServer};
-    use tokio;
+    
 
     #[tokio::test]
     async fn test_fetch_links_success() {
@@ -328,7 +328,7 @@ mod tests {
         let response = result.unwrap();
         // Check some expected fields. Adjust expectations based on real API responses.
         assert!(
-            !response.entity_unique_id.as_str().is_empty(),
+            !response.entity_unique_id.is_empty(),
             "entityUniqueId should not be empty"
         );
         assert_eq!(response.user_country, "US");
