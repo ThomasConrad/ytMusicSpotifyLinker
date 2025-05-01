@@ -988,10 +988,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
 dependencies = [
  "cfg-if",
- "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1879,18 +1877,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "password-auth"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a2a4764cc1f8d961d802af27193c6f4f0124bd0e76e8393cf818e18880f0524"
-dependencies = [
- "argon2",
- "getrandom 0.2.15",
- "password-hash",
- "rand_core",
-]
-
-[[package]]
 name = "password-hash"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2002,6 +1988,7 @@ name = "playlist-linker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "argon2",
  "askama",
  "async-trait",
  "axum",
@@ -2010,7 +1997,7 @@ dependencies = [
  "http 1.3.1",
  "httpmock",
  "hyper 1.6.0",
- "password-auth",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",

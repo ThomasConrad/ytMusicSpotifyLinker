@@ -1,7 +1,10 @@
+use argon2::password_hash::SaltString;
+use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use axum_login::{AuthUser, AuthnBackend, UserId};
-use password_auth::verify_password;
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+use std::env;
 use tokio::task;
 
 #[derive(Clone, Serialize, Deserialize, FromRow)]
@@ -49,12 +52,25 @@ pub enum Error {
 
     #[error(transparent)]
     TaskJoin(#[from] task::JoinError),
+
+    #[error("Missing password salt in environment")]
+    MissingSalt,
+
+    #[error("Invalid password salt")]
+    InvalidSalt,
+
+    #[error("Invalid password hash")]
+    InvalidPassword,
+
+    #[error("Failed to hash password")]
+    HashError,
 }
 
 pub trait DatabaseOperations {
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, Error>;
     async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, Error>;
     async fn verify_password(&self, user: &User, password: &str) -> Result<bool, Error>;
+    async fn create_user(&self, username: &str, password: &str) -> Result<User, Error>;
 }
 
 #[derive(Debug, Clone)]
@@ -88,7 +104,47 @@ impl DatabaseOperations for Database {
     async fn verify_password(&self, user: &User, password: &str) -> Result<bool, Error> {
         let password = password.to_string();
         let user_password = user.password.clone();
-        task::spawn_blocking(move || Ok(verify_password(&password, &user_password).is_ok())).await?
+
+        task::spawn_blocking(move || {
+            let parsed_hash =
+                PasswordHash::new(&user_password).map_err(|_| Error::InvalidPassword)?;
+
+            Ok(Argon2::default()
+                .verify_password(password.as_bytes(), &parsed_hash)
+                .is_ok())
+        })
+        .await?
+    }
+
+    async fn create_user(&self, username: &str, password: &str) -> Result<User, Error> {
+        // Generate a unique random salt for this user
+        let salt = SaltString::generate(&mut thread_rng());
+
+        // Clone the password to move into the task
+        let password = password.to_string();
+
+        let password_hash = task::spawn_blocking(move || {
+            let argon2 = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(15000, 2, 1, None).unwrap(),
+            );
+
+            argon2
+                .hash_password(password.as_bytes(), &salt)
+                .map_err(|_| Error::HashError)
+                .map(|hash| hash.to_string())
+        })
+        .await??;
+
+        let user =
+            sqlx::query_as("INSERT INTO users (username, password) VALUES (?, ?) RETURNING *")
+                .bind(username)
+                .bind(password_hash)
+                .fetch_one(&self.pool)
+                .await?;
+
+        Ok(user)
     }
 }
 
@@ -135,6 +191,7 @@ pub type AuthSession = axum_login::AuthSession<Backend>;
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::env;
 
     async fn setup_test_db() -> Database {
         let pool = SqlitePoolOptions::new()
@@ -157,6 +214,9 @@ mod tests {
         .await
         .expect("Failed to create users table");
 
+        // Set a test salt for the environment
+        env::set_var("PASSWORD_SALT", "test_salt");
+
         Database::new(pool)
     }
 
@@ -164,13 +224,8 @@ mod tests {
     async fn test_get_user_by_username() {
         let db = setup_test_db().await;
 
-        // Insert a test user
-        sqlx::query("INSERT INTO users (username, password) VALUES (?, ?)")
-            .bind("test_user")
-            .bind("hashed_password")
-            .execute(&db.pool)
-            .await
-            .expect("Failed to insert test user");
+        // Create a test user with a known password
+        let test_user = db.create_user("test_user", "test_password").await.unwrap();
 
         // Test getting existing user
         let user = db.get_user_by_username("test_user").await.unwrap();
@@ -186,16 +241,11 @@ mod tests {
     async fn test_get_user_by_id() {
         let db = setup_test_db().await;
 
-        // Insert a test user
-        sqlx::query("INSERT INTO users (username, password) VALUES (?, ?)")
-            .bind("test_user")
-            .bind("hashed_password")
-            .execute(&db.pool)
-            .await
-            .expect("Failed to insert test user");
+        // Create a test user
+        let test_user = db.create_user("test_user", "test_password").await.unwrap();
 
         // Test getting existing user
-        let user = db.get_user_by_id(1).await.unwrap();
+        let user = db.get_user_by_id(test_user.id).await.unwrap();
         assert!(user.is_some());
         assert_eq!(user.unwrap().username, "test_user");
 
@@ -209,11 +259,10 @@ mod tests {
         let db = setup_test_db().await;
 
         // Create a test user with a known password
-        let test_user = User {
-            id: 1,
-            username: "test_user".to_string(),
-            password: password_auth::generate_hash("correct_password"),
-        };
+        let test_user = db
+            .create_user("test_user", "correct_password")
+            .await
+            .unwrap();
 
         // Test correct password
         let result = db

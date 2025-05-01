@@ -6,12 +6,13 @@ publish = false
 
 [dependencies]
 askama = { version = "0.12.1" }
+argon2 = "0.5.2"
 axum = "0.8.1"
 axum-login = "0.17.0"
 axum-messages = "0.8.0"
 http = "1.0.0"
 hyper = "1.0.1"
-password-auth = "1.0.0"
+rand = "0.8.5"
 serde = "1"
 sqlx = { version = "0.8.1", features = ["sqlite", "time", "runtime-tokio"] }
 time = "0.3.39"
