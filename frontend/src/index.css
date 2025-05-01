@@ -8,7 +8,7 @@
   }
   
   body {
-    @apply text-gray-900 bg-gray-50;
+    @apply text-gray-900 bg-gray-50 dark:bg-gray-900 dark:text-gray-50;
   }
 }
 
@@ -18,19 +18,19 @@
   }
   
   .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg;
+    @apply bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 shadow-md hover:shadow-lg;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 shadow-sm hover:shadow;
+    @apply bg-primary-100 text-primary-800 hover:bg-primary-200 dark:bg-primary-800 dark:text-primary-50 dark:hover:bg-primary-700 shadow-sm hover:shadow;
   }
   
   .input {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200;
+    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-50 transition-colors duration-200;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6;
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6;
   }
 
   .container {
@@ -42,14 +42,10 @@
   }
 
   .heading-1 {
-    @apply text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6;
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-900 dark:text-primary-50 mb-6;
   }
 
   .heading-2 {
-    @apply text-2xl sm:text-3xl font-semibold text-gray-800 mb-4;
-  }
-
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400;
+    @apply text-2xl sm:text-3xl font-semibold text-primary-800 dark:text-primary-100 mb-4;
   }
 } 

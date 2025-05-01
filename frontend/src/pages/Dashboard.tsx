@@ -60,9 +60,9 @@ const Dashboard: Component = () => {
       
       {userData() && (
         <div class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-900">Welcome, {userData().name}!</h2>
-            <p class="text-gray-600">Email: {userData().email}</p>
+          <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-50">Welcome, {userData().name}!</h2>
+            <p class="text-gray-600 dark:text-gray-200">Email: {userData().email}</p>
           </div>
           
           {/* Add your dashboard content here */}
@@ -70,8 +70,8 @@ const Dashboard: Component = () => {
             <h2 class="heading-2 mb-4">Your Playlists</h2>
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {/* Playlist cards will go here */}
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-gray-600">No playlists yet</p>
+              <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-gray-600 dark:text-gray-200">No playlists yet</p>
               </div>
             </div>
           </div>

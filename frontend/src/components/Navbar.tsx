@@ -1,5 +1,6 @@
 import { Component, createSignal, onMount } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
+import ThemeToggle from './ThemeToggle';
 
 const Navbar: Component = () => {
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
@@ -18,7 +19,7 @@ const Navbar: Component = () => {
   };
 
   return (
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
+    <nav class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
       <div class="container">
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center">
@@ -29,15 +30,15 @@ const Navbar: Component = () => {
           
           {/* Desktop Navigation */}
           <div class="hidden md:flex items-center space-x-6">
-            <A href="/" class="text-gray-600 hover:text-gray-900 transition-colors">
+            <A href="/" class="text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 transition-colors">
               Home
             </A>
-            <A href="/about" class="text-gray-600 hover:text-gray-900 transition-colors">
+            <A href="/about" class="text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 transition-colors">
               Learn More
             </A>
             {isAuthenticated() ? (
               <>
-                <A href="/dashboard" class="text-gray-600 hover:text-gray-900 transition-colors">
+                <A href="/dashboard" class="text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 transition-colors">
                   Dashboard
                 </A>
                 <button onClick={handleLogout} class="btn btn-secondary">
@@ -49,13 +50,14 @@ const Navbar: Component = () => {
                 Login
               </A>
             )}
+            <ThemeToggle />
           </div>
 
           {/* Mobile menu button */}
           <div class="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen())}
-              class="text-gray-600 hover:text-gray-900 focus:outline-none"
+              class="p-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 focus:outline-none"
             >
               <svg
                 class="h-6 w-6"
@@ -84,21 +86,17 @@ const Navbar: Component = () => {
         </div>
 
         {/* Mobile Navigation */}
-        <div
-          class={`md:hidden transition-all duration-300 ease-in-out ${
-            isMenuOpen() ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
-          } overflow-hidden`}
-        >
+        <div class={`md:hidden ${isMenuOpen() ? 'block' : 'hidden'}`}>
           <div class="px-2 pt-2 pb-3 space-y-1">
             <A
               href="/"
-              class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              class="block px-3 py-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Home
             </A>
             <A
               href="/about"
-              class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              class="block px-3 py-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Learn More
             </A>
@@ -106,13 +104,13 @@ const Navbar: Component = () => {
               <>
                 <A
                   href="/dashboard"
-                  class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  class="block px-3 py-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Dashboard
                 </A>
                 <button
                   onClick={handleLogout}
-                  class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  class="block w-full text-left px-3 py-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Logout
                 </button>
@@ -120,11 +118,14 @@ const Navbar: Component = () => {
             ) : (
               <A
                 href="/login"
-                class="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+                class="block px-3 py-2 rounded-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Login
               </A>
             )}
+            <div class="px-3 py-2">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>

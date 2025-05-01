@@ -13,7 +13,7 @@ const About: Component = () => {
     <div class="max-w-4xl mx-auto space-y-8">
       <div class="card">
         <h1 class="heading-1 text-center">About YT Music Spotify Linker</h1>
-        <p class="text-gray-600 text-lg mb-6">
+        <p class="text-gray-600 dark:text-gray-200 text-lg mb-6">
           A seamless way to transfer your playlists between YouTube Music and Spotify.
         </p>
       </div>
@@ -23,30 +23,30 @@ const About: Component = () => {
           <h2 class="heading-2 mb-4">How It Works</h2>
           <div class="space-y-4">
             <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 font-bold">1</span>
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                <span class="text-blue-600 dark:text-blue-300 font-bold">1</span>
               </div>
               <div>
-                <h3 class="font-semibold text-gray-900">Connect Your Accounts</h3>
-                <p class="text-gray-600">Link your YouTube Music and Spotify accounts securely.</p>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Connect Your Accounts</h3>
+                <p class="text-gray-600 dark:text-gray-200">Link your YouTube Music and Spotify accounts securely.</p>
               </div>
             </div>
             <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 font-bold">2</span>
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                <span class="text-blue-600 dark:text-blue-300 font-bold">2</span>
               </div>
               <div>
-                <h3 class="font-semibold text-gray-900">Select Playlists</h3>
-                <p class="text-gray-600">Choose which playlists you want to transfer between services.</p>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Select Playlists</h3>
+                <p class="text-gray-600 dark:text-gray-200">Choose which playlists you want to transfer between services.</p>
               </div>
             </div>
             <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 font-bold">3</span>
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                <span class="text-blue-600 dark:text-blue-300 font-bold">3</span>
               </div>
               <div>
-                <h3 class="font-semibold text-gray-900">Transfer & Enjoy</h3>
-                <p class="text-gray-600">Your playlists will be transferred while maintaining song order and metadata.</p>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer & Enjoy</h3>
+                <p class="text-gray-600 dark:text-gray-200">Your playlists will be transferred while maintaining song order and metadata.</p>
               </div>
             </div>
           </div>
@@ -59,25 +59,25 @@ const About: Component = () => {
               <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span class="text-gray-600">Bidirectional transfers between YouTube Music and Spotify</span>
+              <span class="text-gray-600 dark:text-gray-200">Bidirectional transfers between YouTube Music and Spotify</span>
             </li>
             <li class="flex items-start space-x-3">
               <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span class="text-gray-600">Preserves playlist order and metadata</span>
+              <span class="text-gray-600 dark:text-gray-200">Preserves playlist order and metadata</span>
             </li>
             <li class="flex items-start space-x-3">
               <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span class="text-gray-600">Smart matching for different song versions</span>
+              <span class="text-gray-600 dark:text-gray-200">Smart matching for different song versions</span>
             </li>
             <li class="flex items-start space-x-3">
               <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span class="text-gray-600">Secure authentication with OAuth</span>
+              <span class="text-gray-600 dark:text-gray-200">Secure authentication with OAuth</span>
             </li>
           </ul>
         </div>
@@ -85,7 +85,7 @@ const About: Component = () => {
 
       <div class="card">
         <h2 class="heading-2 mb-4">Get Started</h2>
-        <p class="text-gray-600 mb-4">
+        <p class="text-gray-600 dark:text-gray-200 mb-4">
           Ready to transfer your playlists? {isAuthenticated() ? 'Head to your dashboard to get started.' : 'Create an account and connect your music services to get started.'}
         </p>
         <div class="flex space-x-4">

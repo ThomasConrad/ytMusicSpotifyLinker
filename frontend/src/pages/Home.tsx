@@ -4,10 +4,10 @@ import { A } from '@solidjs/router';
 const Home: Component = () => {
   return (
     <div class="text-center">
-      <h1 class="text-4xl font-bold text-gray-900 mb-6">
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-50 mb-6">
         Link Your YouTube Music to Spotify
       </h1>
-      <p class="text-xl text-gray-600 mb-8">
+      <p class="text-xl text-gray-600 dark:text-gray-200 mb-8">
         Seamlessly transfer your playlists and favorite tracks between YouTube Music and Spotify
       </p>
       <div class="space-x-4">
