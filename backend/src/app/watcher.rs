@@ -1,4 +1,11 @@
 use crate::app::songlink::SonglinkClient;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum WatcherError {
+    #[error("Failed to initialize watcher")]
+    InitializationError,
+}
 
 pub struct Watcher {
     /// The SonglinkClient instance that will be used for playlist synchronization.
@@ -8,7 +15,7 @@ pub struct Watcher {
 }
 
 impl Watcher {
-    pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new() -> Result<Self, WatcherError> {
         Ok(Self {
             songlink_client: SonglinkClient::new(None),
         })

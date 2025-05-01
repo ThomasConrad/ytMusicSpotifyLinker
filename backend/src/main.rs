@@ -9,9 +9,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 use crate::api::Router;
 use crate::app::Watcher;
 
-mod api;
-mod app;
-mod users;
+pub mod api;
+pub mod app;
+pub mod users;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,5 +27,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .try_init()?;
 
     let app = Watcher::new().await?;
-    Router::new(db.clone(), app).await?.serve().await
+    Router::new(db.clone(), app).await?.serve().await?;
+    Ok(())
 }

@@ -1,4 +1,4 @@
-pub use watcher::Watcher;
+pub use watcher::{Watcher, WatcherError};
 
-mod watcher;
 mod songlink;
+mod watcher;

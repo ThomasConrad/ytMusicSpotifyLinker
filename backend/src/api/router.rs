@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum_login::{
     login_required,
     tower_sessions::{ExpiredDeletion, Expiry, SessionManagerLayer},
@@ -5,17 +6,37 @@ use axum_login::{
 };
 use axum_messages::MessagesManagerLayer;
 use sqlx::SqlitePool;
+use thiserror::Error;
 use time::Duration;
-use tokio::{signal, task::AbortHandle};
-use tower_sessions::cookie::Key;
+use tokio::{
+    signal,
+    task::{AbortHandle, JoinError},
+};
+use tower_sessions::{cookie::Key, session_store::Error as SessionStoreError};
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
     api::{auth, protected},
-    app::Watcher,
+    app::{Watcher, WatcherError},
     users::database,
     users::Backend,
 };
+
+#[derive(Error, Debug)]
+pub enum RouterError {
+    #[error("Failed to initialize router")]
+    InitializationError,
+    #[error("Failed to start server")]
+    ServerError(#[from] std::io::Error),
+    #[error("Database error")]
+    DatabaseError(#[from] sqlx::Error),
+    #[error("Session error")]
+    SessionError(#[from] SessionStoreError),
+    #[error("Watcher error")]
+    WatcherError(#[from] WatcherError),
+    #[error("Task join error")]
+    JoinError(#[from] JoinError),
+}
 
 pub struct Router {
     db: SqlitePool,
@@ -26,11 +47,19 @@ pub struct Router {
 }
 
 impl Router {
-    pub async fn new(pool: SqlitePool, app: Watcher) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(pool: SqlitePool, app: Watcher) -> Result<Self, RouterError> {
         Ok(Self { db: pool, app })
     }
 
-    pub async fn serve(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn into_axum_router(&self) -> axum::Router {
+        protected::router()
+            .route_layer(login_required!(Backend, login_url = "/login"))
+            .merge(auth::router())
+    }
+
+    pub async fn serve(mut self) -> Result<(), RouterError> {
+        let app = self.into_axum_router();
+
         // Session layer.
         //
         // This uses `tower-sessions` to establish a layer that will provide the session
@@ -60,22 +89,24 @@ impl Router {
         let backend = Backend::new(db);
         let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
-        let app = protected::router()
-            .route_layer(login_required!(Backend, login_url = "/login"))
-            .merge(auth::router())
-            .layer(MessagesManagerLayer)
-            .layer(auth_layer);
+        let app = app.layer(MessagesManagerLayer).layer(auth_layer);
 
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
 
         // Ensure we use a shutdown signal to abort the deletion task.
-        axum::serve(listener, app.into_make_service())
+        axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_signal(deletion_task.abort_handle()))
             .await?;
 
         deletion_task.await??;
 
         Ok(())
+    }
+}
+
+impl From<Router> for axum::Router {
+    fn from(router: Router) -> Self {
+        router.into_axum_router()
     }
 }
 

@@ -1,4 +1,4 @@
-pub use router::Router;
+pub use router::{Router, RouterError};
 
 mod auth;
 mod protected;
