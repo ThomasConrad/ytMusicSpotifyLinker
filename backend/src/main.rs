@@ -6,12 +6,7 @@
 use sqlx::SqlitePool;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::api::Router;
-use crate::app::Watcher;
-
-pub mod api;
-pub mod app;
-pub mod users;
+use playlist_linker::{Router, Watcher};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

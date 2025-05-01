@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[lib]
+name = "playlist_linker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "playlist-linker"
+path = "src/main.rs"
+
 [dependencies]
 askama = { version = "0.12.1" }
 argon2 = "0.5.2"
