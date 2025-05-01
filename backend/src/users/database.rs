@@ -214,10 +214,59 @@ mod tests {
         .await
         .expect("Failed to create users table");
 
-        // Set a test salt for the environment
-        env::set_var("PASSWORD_SALT", "test_salt");
-
         Database::new(pool)
+    }
+
+    #[tokio::test]
+    async fn test_password_hashing_and_verification() {
+        let db = setup_test_db().await;
+        let password = "test_password123!";
+
+        // Create two users with the same password
+        let user1 = db.create_user("user1", password).await.unwrap();
+        let user2 = db.create_user("user2", password).await.unwrap();
+
+        // Verify both users can log in with their password
+        assert!(db.verify_password(&user1, password).await.unwrap());
+        assert!(db.verify_password(&user2, password).await.unwrap());
+
+        // Verify wrong passwords are rejected
+        assert!(!db.verify_password(&user1, "wrong_password").await.unwrap());
+        assert!(!db.verify_password(&user2, "wrong_password").await.unwrap());
+
+        // Verify that the same password produces different hashes for different users
+        assert_ne!(
+            user1.password, user2.password,
+            "Same password should produce different hashes for different users"
+        );
+
+        // Verify that the hash contains the expected components
+        assert!(
+            user1.password.starts_with("$argon2id$"),
+            "Hash should start with algorithm identifier"
+        );
+        assert!(
+            user1.password.contains("$v="),
+            "Hash should contain version"
+        );
+        assert!(
+            user1.password.contains("$m="),
+            "Hash should contain memory parameter"
+        );
+        // The hash format is $argon2id$v=19$m=19456,t=2,p=1$salt$hash
+        // So we check for the comma-separated parameters
+        assert!(
+            user1.password.contains(",t="),
+            "Hash should contain iterations parameter"
+        );
+        assert!(
+            user1.password.contains(",p="),
+            "Hash should contain parallelism parameter"
+        );
+        assert!(
+            user1.password.matches('$').count() >= 4,
+            "Hash should contain at least 4 $ separators (algorithm, version, params, salt, hash)"
+        );
     }
 
     #[tokio::test]
