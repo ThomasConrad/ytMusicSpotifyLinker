@@ -4,7 +4,6 @@ use axum_login::{AuthUser, AuthnBackend, UserId};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
-use std::env;
 use tokio::task;
 
 #[derive(Clone, Serialize, Deserialize, FromRow)]
@@ -45,7 +44,9 @@ pub struct Credentials {
     pub next: Option<String>,
 }
 
+/// Error types that can occur during database operations.
 #[derive(Debug, thiserror::Error)]
+#[allow(dead_code)]
 pub enum Error {
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
@@ -53,9 +54,13 @@ pub enum Error {
     #[error(transparent)]
     TaskJoin(#[from] task::JoinError),
 
+    /// Error returned when the password salt environment variable is missing.
+    /// This is part of our public API for error handling.
     #[error("Missing password salt in environment")]
     MissingSalt,
 
+    /// Error returned when the password salt is invalid.
+    /// This is part of our public API for error handling.
     #[error("Invalid password salt")]
     InvalidSalt,
 
@@ -63,13 +68,18 @@ pub enum Error {
     InvalidPassword,
 
     #[error("Failed to hash password")]
-    HashError,
+    HashFailed,
 }
 
+/// Operations that can be performed on the database.
+/// This trait defines the public API for database operations.
+#[allow(dead_code)]
 pub trait DatabaseOperations {
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, Error>;
     async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, Error>;
     async fn verify_password(&self, user: &User, password: &str) -> Result<bool, Error>;
+    /// Creates a new user with the given username and password.
+    /// This is used in tests and is part of our public API.
     async fn create_user(&self, username: &str, password: &str) -> Result<User, Error>;
 }
 
@@ -132,7 +142,7 @@ impl DatabaseOperations for Database {
 
             argon2
                 .hash_password(password.as_bytes(), &salt)
-                .map_err(|_| Error::HashError)
+                .map_err(|_| Error::HashFailed)
                 .map(|hash| hash.to_string())
         })
         .await??;
@@ -191,7 +201,6 @@ pub type AuthSession = axum_login::AuthSession<Backend>;
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
-    use std::env;
 
     async fn setup_test_db() -> Database {
         let pool = SqlitePoolOptions::new()
@@ -274,7 +283,7 @@ mod tests {
         let db = setup_test_db().await;
 
         // Create a test user with a known password
-        let test_user = db.create_user("test_user", "test_password").await.unwrap();
+        let _test_user = db.create_user("test_user", "test_password").await.unwrap();
 
         // Test getting existing user
         let user = db.get_user_by_username("test_user").await.unwrap();

@@ -19,6 +19,9 @@ use crate::{
 
 pub struct Router {
     db: SqlitePool,
+    /// The Watcher instance that will be used for playlist synchronization.
+    /// This field will be used in future implementations.
+    #[allow(dead_code)]
     app: Watcher,
 }
 

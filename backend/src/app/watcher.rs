@@ -1,6 +1,9 @@
 use crate::app::songlink::SonglinkClient;
 
 pub struct Watcher {
+    /// The SonglinkClient instance that will be used for playlist synchronization.
+    /// This field will be used in future implementations.
+    #[allow(dead_code)]
     songlink_client: SonglinkClient,
 }
 
