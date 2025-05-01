@@ -10,12 +10,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 use crate::api::Router;
 use crate::app::Watcher;
 use crate::config::AppConfig;
-use crate::db::SledDb;
+use crate::database::Database;
 
 mod api;
 mod app;
 mod config;
-mod db;
+mod database;
 mod users;
 
 #[tokio::main]
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.ensure_db_path_exists().context("Failed to create database directory")?;
     
     // Initialize the database
-    let db = SledDb::open(&config.db_path).context("Failed to open Sled database")?;
+    let db = Database::open(&config.db_path).context("Failed to open database")?;
 
     // Initialize logging
     tracing_subscriber::registry()

@@ -12,19 +12,19 @@ use crate::{
     api::{auth, protected},
     app::Watcher,
     config::AppConfig,
-    db::{session_store::SledStore, SledDb},
+    database::Database,
     users::Backend,
 };
 
 pub struct Router {
-    db: SledDb,
+    db: Database,
     #[allow(dead_code)] // Will be used in future implementations
     app: Watcher,
     config: AppConfig,
 }
 
 impl Router {
-    pub async fn new(db: SledDb, app: Watcher, config: AppConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(db: Database, app: Watcher, config: AppConfig) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self { db, app, config })
     }
 
@@ -33,8 +33,7 @@ impl Router {
         //
         // This uses `tower-sessions` to establish a layer that will provide the session
         // as a request extension.
-        let session_store = SledStore::new(self.db.clone());
-        session_store.migrate().await?;
+        let session_store = self.db.repository("sessions")?;
 
         let deletion_task = tokio::task::spawn(
             session_store
