@@ -37,15 +37,15 @@ const Login: Component = () => {
   };
 
   return (
-    <div class="max-w-md mx-auto card">
-      <h2 class="heading-2 text-center mb-8">Login</h2>
+    <div class="max-w-md mx-auto card animate-zoom-in shadow-lg hover:shadow-xl transition-shadow duration-300">
+      <h2 class="heading-2 text-center mb-8 animate-fade-in">Login</h2>
       {error() && (
-        <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
+        <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-4 animate-shake">
           {error()}
         </div>
       )}
       <form onSubmit={handleSubmit} class="space-y-6">
-        <div>
+        <div class="animate-slide-up" style={{"animation-delay": "100ms"}}>
           <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             Email
           </label>
@@ -54,11 +54,11 @@ const Login: Component = () => {
             id="email"
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
-            class="input"
+            class="input focus:animate-shadow-pulse transition-all duration-300 focus:scale-[1.02]"
             required
           />
         </div>
-        <div>
+        <div class="animate-slide-up" style={{"animation-delay": "200ms"}}>
           <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             Password
           </label>
@@ -67,11 +67,15 @@ const Login: Component = () => {
             id="password"
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
-            class="input"
+            class="input focus:animate-shadow-pulse transition-all duration-300 focus:scale-[1.02]"
             required
           />
         </div>
-        <button type="submit" class="btn btn-primary w-full">
+        <button 
+          type="submit" 
+          class="btn btn-primary w-full animate-slide-up transition-all duration-300 hover:scale-105 hover:shadow-lg"
+          style={{"animation-delay": "300ms"}}
+        >
           Login
         </button>
       </form>

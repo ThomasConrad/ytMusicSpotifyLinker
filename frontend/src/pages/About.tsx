@@ -11,9 +11,9 @@ const About: Component = () => {
 
   return (
     <div class="max-w-4xl mx-auto space-y-8">
-      <div class="card">
-        <h1 class="heading-1 text-center">About YT Music Spotify Linker</h1>
-        <p class="text-gray-600 dark:text-gray-200 text-lg mb-6">
+      <div class="card animate-zoom-in hover:shadow-lg transition-all duration-300">
+        <h1 class="heading-1 text-center animate-fade-in">About YT Music Spotify Linker</h1>
+        <p class="text-gray-600 dark:text-gray-200 text-lg mb-6 animate-slide-up" style={{"animation-delay": "100ms"}}>
           A seamless way to transfer your playlists between YouTube Music and Spotify.
         </p>
       </div>

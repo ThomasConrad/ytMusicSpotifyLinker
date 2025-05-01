@@ -10,9 +10,9 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const App: Component = () => {
   return (
     <ThemeProvider>
-      <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 animate-fade-in-slow">
         <Navbar />
-        <main class="flex-1 py-8">
+        <main class="flex-1 py-8 animate-zoom-in">
           <div class="container mx-auto px-4">
             <Routes>
               <Route path="/" component={Home} />
@@ -22,9 +22,9 @@ const App: Component = () => {
             </Routes>
           </div>
         </main>
-        <footer class="bg-white dark:bg-gray-800 py-8 border-t border-gray-200 dark:border-gray-700 mt-auto">
+        <footer class="bg-white dark:bg-gray-800 py-8 border-t border-gray-200 dark:border-gray-700 mt-auto animate-slide-up">
           <div class="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
-            <p>© 2024 YT Music Spotify Linker. All rights reserved.</p>
+            <p class="animate-fade-in" style={{"animation-delay": "300ms"}}>© 2024 YT Music Spotify Linker. All rights reserved.</p>
           </div>
         </footer>
       </div>
