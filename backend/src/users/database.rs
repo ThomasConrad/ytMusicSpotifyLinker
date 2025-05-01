@@ -75,12 +75,26 @@ pub enum Error {
 /// This trait defines the public API for database operations.
 #[allow(dead_code)]
 pub trait DatabaseOperations {
-    async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, Error>;
-    async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, Error>;
-    async fn verify_password(&self, user: &User, password: &str) -> Result<bool, Error>;
+    fn get_user_by_username(
+        &self,
+        username: &str,
+    ) -> impl std::future::Future<Output = Result<Option<User>, Error>> + Send;
+    fn get_user_by_id(
+        &self,
+        id: i64,
+    ) -> impl std::future::Future<Output = Result<Option<User>, Error>> + Send;
+    fn verify_password(
+        &self,
+        user: &User,
+        password: &str,
+    ) -> impl std::future::Future<Output = Result<bool, Error>> + Send;
     /// Creates a new user with the given username and password.
     /// This is used in tests and is part of our public API.
-    async fn create_user(&self, username: &str, password: &str) -> Result<User, Error>;
+    fn create_user(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> impl std::future::Future<Output = Result<User, Error>> + Send;
 }
 
 #[derive(Debug, Clone)]

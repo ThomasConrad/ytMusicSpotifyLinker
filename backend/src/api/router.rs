@@ -57,7 +57,7 @@ impl Router {
             .merge(auth::router())
     }
 
-    pub async fn serve(mut self) -> Result<(), RouterError> {
+    pub async fn serve(self) -> Result<(), RouterError> {
         let app = self.into_axum_router();
 
         // Session layer.
