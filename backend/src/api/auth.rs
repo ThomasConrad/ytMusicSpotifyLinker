@@ -1,15 +1,32 @@
 use askama::Template;
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
     routing::{get, post},
-    Form, Router,
+    Form, Json, Router,
 };
 use axum_messages::{Message, Messages};
 use serde::Deserialize;
+use sqlx::SqlitePool;
 
-use crate::users::{AuthSession, Credentials};
+use crate::users::{
+    database::{Database, DatabaseOperations},
+    AuthSession, Credentials,
+};
+
+#[derive(Clone)]
+pub struct AuthState {
+    db: Database,
+}
+
+impl AuthState {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self {
+            db: Database::new(pool),
+        }
+    }
+}
 
 #[derive(Template)]
 #[template(path = "login.html")]
@@ -25,15 +42,35 @@ pub struct NextUrl {
     next: Option<String>,
 }
 
-pub fn router() -> Router<()> {
+#[derive(Debug, Deserialize)]
+pub struct RegisterRequest {
+    username: String,
+    password: String,
+}
+
+pub fn router(pool: SqlitePool) -> Router<()> {
+    let state = AuthState::new(pool);
     Router::new()
         .route("/login", post(self::post::login))
         .route("/login", get(self::get::login))
         .route("/logout", get(self::get::logout))
+        .route("/register", post(self::post::register))
+        .with_state(state)
 }
 
 mod post {
     use super::*;
+    use axum::extract::State;
+
+    pub async fn register(
+        State(state): State<AuthState>,
+        Json(creds): Json<RegisterRequest>,
+    ) -> Result<impl IntoResponse, StatusCode> {
+        match state.db.create_user(&creds.username, &creds.password).await {
+            Ok(_) => Ok(StatusCode::CREATED),
+            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    }
 
     pub async fn login(
         mut auth_session: AuthSession,

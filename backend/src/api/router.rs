@@ -51,15 +51,13 @@ impl Router {
         Ok(Self { db: pool, app })
     }
 
-    pub fn into_axum_router(&self) -> axum::Router {
+    pub fn get_axum_router(&self) -> axum::Router {
         protected::router()
             .route_layer(login_required!(Backend, login_url = "/login"))
-            .merge(auth::router())
+            .merge(auth::router(self.db.clone()))
     }
 
     pub async fn serve(self) -> Result<(), RouterError> {
-        let app = self.into_axum_router();
-
         // Session layer.
         //
         // This uses `tower-sessions` to establish a layer that will provide the session
@@ -85,11 +83,14 @@ impl Router {
         //
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
-        let db = database::Database::new(self.db);
-        let backend = Backend::new(db);
+        let db = database::Database::new(self.db.clone());
+        let backend = database::Backend::new(db);
         let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
-        let app = app.layer(MessagesManagerLayer).layer(auth_layer);
+        let app = self
+            .get_axum_router()
+            .layer(MessagesManagerLayer)
+            .layer(auth_layer);
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
 
@@ -104,9 +105,9 @@ impl Router {
     }
 }
 
-impl From<Router> for axum::Router {
-    fn from(router: Router) -> Self {
-        router.into_axum_router()
+impl From<&Router> for axum::Router {
+    fn from(router: &Router) -> Self {
+        router.get_axum_router()
     }
 }
 
