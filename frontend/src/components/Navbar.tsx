@@ -31,7 +31,7 @@ const Navbar: Component = () => {
           <div class="flex items-center">
             <A 
               href="/" 
-              class="text-xl font-bold relative overflow-hidden bg-gradient-to-r from-primary-500 to-aurora-purple bg-clip-text text-transparent hover:animate-pulse-slow transform transition-transform duration-300 hover:scale-105 animate-fade-in-slow"
+              class="text-xl font-bold text-gray-800 dark:text-gray-200 hover:text-primary-500 transform transition-transform duration-300  animate-fade-in-slow"
             >
               YT Music Spotify Linker
             </A>
@@ -73,7 +73,7 @@ const Navbar: Component = () => {
             ) : (
               <A 
                 href="/login" 
-                class="btn btn-primary animate-fade-in hover:animate-shadow-pulse transition-all transform hover:scale-105" 
+                class="btn btn-primary animate-fade-in hover:animate-shadow-pulse transition-all transform " 
                 style={{"animation-delay": getAnimationDelay(2)}}
               >
                 Login
