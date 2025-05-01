@@ -47,21 +47,16 @@ fn default_log_level() -> String {
 
 impl AppConfig {
     pub fn load() -> Result<Self, ConfigError> {
-        // Start with default settings
-        let default_config = Config::builder()
-            .set_default("db_path", DEFAULT_DB_PATH)?
-            .set_default("host", DEFAULT_HOST)?
-            .set_default("port", DEFAULT_PORT)?
-            .set_default("log_level", default_log_level())?
-            .build()?;
-        
         // Try to load .env file, but don't fail if it doesn't exist
         let _ = dotenv::dotenv();
         
         // Load from multiple sources in order, with later sources overriding earlier ones
         let config = Config::builder()
             // Start with defaults
-            .add_source(Config::try_from(&default_config)?)
+            .set_default("db_path", DEFAULT_DB_PATH)?
+            .set_default("host", DEFAULT_HOST)?
+            .set_default("port", DEFAULT_PORT)?
+            .set_default("log_level", default_log_level())?
             // Add in settings from the config file if it exists
             .add_source(File::with_name("config").required(false))
             // Add in settings from the environment
