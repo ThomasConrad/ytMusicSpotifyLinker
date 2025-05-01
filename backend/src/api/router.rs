@@ -13,6 +13,7 @@ use tower_sessions_sqlx_store::SqliteStore;
 use crate::{
     api::{auth, protected},
     app::Watcher,
+    users::database,
     users::Backend,
 };
 
@@ -52,7 +53,8 @@ impl Router {
         //
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
-        let backend = Backend::new(self.db);
+        let db = database::Database::new(self.db);
+        let backend = Backend::new(db);
         let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
         let app = protected::router()

@@ -39,7 +39,7 @@ mod post {
         mut auth_session: AuthSession,
         messages: Messages,
         Form(creds): Form<Credentials>,
-    ) -> impl IntoResponse {
+    ) -> Result<impl IntoResponse, StatusCode> {
         let user = match auth_session.authenticate(creds.clone()).await {
             Ok(Some(user)) => user,
             Ok(None) => {
@@ -50,23 +50,23 @@ mod post {
                     login_url = format!("{}?next={}", login_url, next);
                 };
 
-                return Redirect::to(&login_url).into_response();
+                return Ok(Redirect::to(&login_url).into_response());
             }
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
         };
 
         if auth_session.login(&user).await.is_err() {
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
 
         messages.success(format!("Successfully logged in as {}", user.username));
 
-        if let Some(ref next) = creds.next {
-            Redirect::to(next)
+        Ok(if let Some(next) = creds.next {
+            Redirect::to(&next)
         } else {
             Redirect::to("/")
         }
-        .into_response()
+        .into_response())
     }
 }
 
@@ -76,21 +76,21 @@ mod get {
     pub async fn login(
         messages: Messages,
         Query(NextUrl { next }): Query<NextUrl>,
-    ) -> Html<String> {
-        Html(
-            LoginTemplate {
-                messages: messages.into_iter().collect(),
-                next,
-            }
+    ) -> Result<Html<String>, StatusCode> {
+        let template = LoginTemplate {
+            messages: messages.into_iter().collect(),
+            next,
+        };
+        template
             .render()
-            .unwrap(),
-        )
+            .map(Html)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
     }
 
-    pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
-        match auth_session.logout().await {
-            Ok(_) => Redirect::to("/login").into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    pub async fn logout(mut auth_session: AuthSession) -> Result<impl IntoResponse, StatusCode> {
+        if auth_session.logout().await.is_err() {
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
+        Ok(Redirect::to("/login").into_response())
     }
 }
