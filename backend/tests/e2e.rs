@@ -44,7 +44,7 @@ async fn setup_test_server() -> Result<(SocketAddr, SqlitePool)> {
 
     // Build the app
     let app = AxumRouter::new()
-        .merge(router)
+        .merge(&router)
         .layer(ServiceBuilder::new().layer(auth_layer));
 
     // Bind to a random port
