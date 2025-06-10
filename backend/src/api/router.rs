@@ -53,6 +53,7 @@ impl Router {
 
     pub fn get_axum_router(&self) -> axum::Router {
         protected::router()
+            .with_state(self.db.clone())
             .route_layer(login_required!(Backend, login_url = "/login"))
             .merge(auth::router(self.db.clone()))
     }

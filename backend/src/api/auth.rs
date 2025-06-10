@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::{Query, State},
+    extract::Query,
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
     routing::{get, post},

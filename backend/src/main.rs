@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .try_init()?;
 
-    let app = Watcher::new().await?;
+    let app = Watcher::new(db.clone()).await?;
     Router::new(db.clone(), app).await?.serve().await?;
     Ok(())
 }
