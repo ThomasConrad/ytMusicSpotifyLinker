@@ -1,21 +1,17 @@
-import { Component, createSignal, onMount, For } from 'solid-js';
+import { Component, createSignal } from 'solid-js';
 import { A, useNavigate, useLocation } from '@solidjs/router';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar: Component = () => {
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth();
 
-  onMount(() => {
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
-  });
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await auth.logout();
+    setIsMenuOpen(false);
     navigate('/login');
   };
 
@@ -53,7 +49,7 @@ const Navbar: Component = () => {
             >
               Learn More
             </A>
-            {isAuthenticated() ? (
+            {auth.isAuthenticated() ? (
               <>
                 <A 
                   href="/dashboard" 
@@ -140,7 +136,7 @@ const Navbar: Component = () => {
             >
               Learn More
             </A>
-            {isAuthenticated() ? (
+            {auth.isAuthenticated() ? (
               <>
                 <A
                   href="/dashboard"
