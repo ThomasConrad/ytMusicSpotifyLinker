@@ -24,7 +24,7 @@ async fn setup_test_server() -> Result<(SocketAddr, SqlitePool)> {
     sqlx::migrate!().run(&pool).await?;
 
     // Create the app
-    let app = Watcher::new().await?;
+    let app = Watcher::new(pool.clone()).await?;
     let router = Router::new(pool.clone(), app).await?;
 
     // Set up session store
@@ -68,7 +68,7 @@ async fn test_user_creation_and_login() -> Result<()> {
 
     // Create a new user
     let response = client
-        .post(format!("{}/register", base_url))
+        .post(format!("{}/api/auth/register", base_url))
         .json(&serde_json::json!({
             "username": "testuser",
             "password": "testpassword"
@@ -80,7 +80,7 @@ async fn test_user_creation_and_login() -> Result<()> {
 
     // Try to login with the created user
     let response = client
-        .post(format!("{}/login", base_url))
+        .post(format!("{}/api/auth/login", base_url))
         .json(&serde_json::json!({
             "username": "testuser",
             "password": "testpassword"
@@ -124,7 +124,7 @@ async fn test_spotify_integration() -> Result<()> {
 
     // Create a user and login
     let response = client
-        .post(format!("{}/register", base_url))
+        .post(format!("{}/api/auth/register", base_url))
         .json(&serde_json::json!({
             "username": "spotifyuser",
             "password": "testpassword"
@@ -135,7 +135,7 @@ async fn test_spotify_integration() -> Result<()> {
     assert!(response.status().is_success());
 
     let response = client
-        .post(format!("{}/login", base_url))
+        .post(format!("{}/api/auth/login", base_url))
         .json(&serde_json::json!({
             "username": "spotifyuser",
             "password": "testpassword"
