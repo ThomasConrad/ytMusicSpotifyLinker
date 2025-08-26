@@ -6,7 +6,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider, ProtectedRoute } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute, GuestRoute } from './components/auth';
 
 const App: Component = () => {
   return (
@@ -18,8 +19,15 @@ const App: Component = () => {
             <div class="container mx-auto px-4">
               <Routes>
                 <Route path="/" component={Home} />
-                <Route path="/login" component={Login} />
                 <Route path="/about" component={About} />
+                <Route 
+                  path="/login" 
+                  component={() => (
+                    <GuestRoute redirectTo="/dashboard">
+                      <Login />
+                    </GuestRoute>
+                  )} 
+                />
                 <Route 
                   path="/dashboard" 
                   component={() => (

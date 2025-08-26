@@ -6,7 +6,6 @@ import {
   ParentComponent,
   onMount 
 } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
 import { authApi, User, LoginRequest, RegisterRequest } from '../services/authApi';
 
 // Authentication state and methods
@@ -181,42 +180,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Higher-order component for protecting routes
-export interface ProtectedRouteProps {
-  children: any;
-  redirectTo?: string;
-  fallback?: () => any;
-}
-
-export const ProtectedRoute: ParentComponent<ProtectedRouteProps> = (props) => {
-  const auth = useAuth();
-  const navigate = useNavigate();
-
-  createEffect(() => {
-    // Wait for initial auth check to complete
-    if (auth.isLoading()) return;
-
-    // If not authenticated and no fallback provided, redirect
-    if (!auth.isAuthenticated() && !props.fallback) {
-      const redirectTo = props.redirectTo || '/login';
-      navigate(redirectTo, { replace: true });
-    }
-  });
-
-  // Show loading while checking authentication
-  if (auth.isLoading()) {
-    return (
-      <div class="flex items-center justify-center min-h-screen">
-        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  // Show fallback if not authenticated and fallback is provided
-  if (!auth.isAuthenticated() && props.fallback) {
-    return props.fallback();
-  }
-
-  // Show children if authenticated
-  return auth.isAuthenticated() ? props.children : null;
-};
+// Note: ProtectedRoute has been moved to components/auth/ProtectedRoute.tsx
+// This export is kept for backward compatibility during migration
+export { ProtectedRoute, type ProtectedRouteProps } from '../components/auth/ProtectedRoute';
