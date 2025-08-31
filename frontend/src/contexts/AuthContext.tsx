@@ -1,12 +1,17 @@
-import { 
-  createContext, 
-  createSignal, 
+import {
+  createContext,
+  createSignal,
   createEffect,
-  useContext, 
+  useContext,
   ParentComponent,
-  onMount 
-} from 'solid-js';
-import { authApi, User, LoginRequest, RegisterRequest } from '../services/authApi';
+  onMount,
+} from "solid-js";
+import {
+  authApi,
+  User,
+  LoginRequest,
+  RegisterRequest,
+} from "../services/authApi";
 
 // Authentication state and methods
 interface AuthContextType {
@@ -14,7 +19,7 @@ interface AuthContextType {
   user: () => User | null;
   isAuthenticated: () => boolean;
   isLoading: () => boolean;
-  
+
   // Actions
   login: (credentials: LoginRequest) => Promise<LoginResult>;
   register: (userData: RegisterRequest) => Promise<RegisterResult>;
@@ -48,18 +53,24 @@ export const AuthProvider: ParentComponent = (props) => {
 
   // Check authentication status on mount
   const checkAuth = async () => {
+    console.log("🔍 Starting checkAuth...");
     setIsLoading(true);
     try {
+      console.log("📞 Calling authApi.getCurrentUser()...");
       const result = await authApi.getCurrentUser();
+      console.log("📋 getCurrentUser result:", result);
       if (result.success) {
+        console.log("✅ Auth successful, setting user:", result.data);
         setUser(result.data);
       } else {
+        console.log("❌ Auth failed:", result.error);
         setUser(null);
       }
     } catch (error) {
-      console.warn('Auth check failed:', error);
+      console.warn("💥 Auth check failed with exception:", error);
       setUser(null);
     } finally {
+      console.log("🏁 checkAuth finished, setting loading to false");
       setIsLoading(false);
     }
   };
@@ -69,7 +80,7 @@ export const AuthProvider: ParentComponent = (props) => {
     setIsLoading(true);
     try {
       const result = await authApi.login(credentials);
-      
+
       if (result.success) {
         setUser(result.data);
         return { success: true };
@@ -84,7 +95,7 @@ export const AuthProvider: ParentComponent = (props) => {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Login failed',
+        error: error.message || "Login failed",
       };
     } finally {
       setIsLoading(false);
@@ -92,11 +103,13 @@ export const AuthProvider: ParentComponent = (props) => {
   };
 
   // Register function
-  const register = async (userData: RegisterRequest): Promise<RegisterResult> => {
+  const register = async (
+    userData: RegisterRequest,
+  ): Promise<RegisterResult> => {
     setIsLoading(true);
     try {
       const result = await authApi.register(userData);
-      
+
       if (result.success) {
         setUser(result.data);
         return { success: true };
@@ -111,7 +124,7 @@ export const AuthProvider: ParentComponent = (props) => {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Registration failed',
+        error: error.message || "Registration failed",
       };
     } finally {
       setIsLoading(false);
@@ -124,7 +137,7 @@ export const AuthProvider: ParentComponent = (props) => {
     try {
       await authApi.logout();
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      console.warn("Logout API call failed:", error);
       // Continue with local logout even if API call fails
     } finally {
       // Clear user state regardless of API result
@@ -142,13 +155,16 @@ export const AuthProvider: ParentComponent = (props) => {
   createEffect(() => {
     if (!isAuthenticated()) return;
 
-    const interval = setInterval(async () => {
-      const isValid = await authApi.checkAuthentication();
-      if (!isValid && user()) {
-        console.warn('Session expired, clearing user state');
-        setUser(null);
-      }
-    }, 5 * 60 * 1000); // 5 minutes
+    const interval = setInterval(
+      async () => {
+        const isValid = await authApi.checkAuthentication();
+        if (!isValid && user()) {
+          console.warn("Session expired, clearing user state");
+          setUser(null);
+        }
+      },
+      5 * 60 * 1000,
+    ); // 5 minutes
 
     // Cleanup on unmount or when user becomes unauthenticated
     return () => clearInterval(interval);
@@ -175,11 +191,14 @@ export const AuthProvider: ParentComponent = (props) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
 // Note: ProtectedRoute has been moved to components/auth/ProtectedRoute.tsx
 // This export is kept for backward compatibility during migration
-export { ProtectedRoute, type ProtectedRouteProps } from '../components/auth/ProtectedRoute';
+export {
+  ProtectedRoute,
+  type ProtectedRouteProps,
+} from "../components/auth/ProtectedRoute";

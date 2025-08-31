@@ -34,7 +34,7 @@ tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
 thiserror = "2.0"
 async-trait = "0.1"
 anyhow = "1.0.97"
-reqwest = { version = "0.12.14", features = ["json"] }
+reqwest = { version = "0.12.14", features = ["json", "cookies"] }
 serde_json = "1.0.140"
 httpmock = "0.7.0"
 url = "2.5.4"

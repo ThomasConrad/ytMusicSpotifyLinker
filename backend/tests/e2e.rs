@@ -94,6 +94,100 @@ async fn test_user_creation_and_login() -> Result<()> {
 }
 
 #[test(tokio::test)]
+async fn test_auth_workflow() -> Result<()> {
+    // Start the server
+    let (addr, _pool) = setup_test_server().await?;
+    let jar = std::sync::Arc::new(reqwest::cookie::Jar::default());
+    let client = Client::builder().cookie_provider(jar).build()?;
+    let base_url = format!("http://{}", addr);
+
+    // Test registration
+    let response = client
+        .post(format!("{}/api/auth/register", base_url))
+        .json(&serde_json::json!({
+            "username": "authtest",
+            "password": "securepass123"
+        }))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success());
+    let register_body: serde_json::Value = response.json().await?;
+    assert_eq!(register_body["success"], true);
+    assert_eq!(register_body["user"]["username"], "authtest");
+
+    // Test profile access after registration (auto-login)
+    let response = client
+        .get(format!("{}/api/auth/profile", base_url))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success());
+    let profile_body: serde_json::Value = response.json().await?;
+    assert_eq!(profile_body["username"], "authtest");
+
+    // Test logout
+    let response = client
+        .post(format!("{}/api/auth/logout", base_url))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success());
+    let logout_body: serde_json::Value = response.json().await?;
+    assert_eq!(logout_body["success"], true);
+
+    // Test that profile is now inaccessible
+    let response = client
+        .get(format!("{}/api/auth/profile", base_url))
+        .send()
+        .await?;
+
+    assert_eq!(response.status().as_u16(), 401);
+
+    // Test login with correct credentials
+    let response = client
+        .post(format!("{}/api/auth/login", base_url))
+        .json(&serde_json::json!({
+            "username": "authtest",
+            "password": "securepass123"
+        }))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success());
+    let login_body: serde_json::Value = response.json().await?;
+    assert_eq!(login_body["success"], true);
+    assert_eq!(login_body["user"]["username"], "authtest");
+
+    // Test profile is accessible again
+    let response = client
+        .get(format!("{}/api/auth/profile", base_url))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success());
+    let profile_body: serde_json::Value = response.json().await?;
+    assert_eq!(profile_body["username"], "authtest");
+
+    // Test login with incorrect credentials
+    let response = client
+        .post(format!("{}/api/auth/login", base_url))
+        .json(&serde_json::json!({
+            "username": "authtest",
+            "password": "wrongpassword"
+        }))
+        .send()
+        .await?;
+
+    assert!(response.status().is_success()); // Auth errors return 200 with error in JSON
+    let error_body: serde_json::Value = response.json().await?;
+    assert_eq!(error_body["success"], false);
+    assert_eq!(error_body["error_code"], "INVALID_CREDENTIALS");
+
+    Ok(())
+}
+
+#[test(tokio::test)]
 async fn test_spotify_integration() -> Result<()> {
     // Start the server
     let (addr, _pool) = setup_test_server().await?;

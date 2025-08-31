@@ -1,0 +1,21 @@
+{
+  "id": "approval_1756190843679_zimpqxh5q",
+  "title": "Requirements Phase: user-authentication-homepage - Ready for Review",
+  "filePath": ".spec-workflow/specs/user-authentication-homepage/requirements.md",
+  "type": "document",
+  "status": "needs-revision",
+  "createdAt": "2025-08-26T06:47:23.680Z",
+  "category": "spec",
+  "categoryName": "user-authentication-homepage",
+  "response": "Feedback Summary (1 comments):\n\nGeneral Comments:\n1. Great, but it is important that this is split into different tasks and commits. I want fx. login backend, login frontend into seperate commits. isolate responsibility of changes at a time to the smallest scope that makes sense.\n\n",
+  "annotations": "{\n  \"decision\": \"needs-revision\",\n  \"comments\": [\n    {\n      \"type\": \"general\",\n      \"comment\": \"Great, but it is important that this is split into different tasks and commits. I want fx. login backend, login frontend into seperate commits. isolate responsibility of changes at a time to the smallest scope that makes sense.\",\n      \"timestamp\": \"2025-08-26T06:49:20.273Z\",\n      \"id\": \"comment_1756190960273_vrt1kn157\"\n    }\n  ],\n  \"summary\": \"Feedback Summary (1 comments):\\n\\nGeneral Comments:\\n1. Great, but it is important that this is split into different tasks and commits. I want fx. login backend, login frontend into seperate commits. isolate responsibility of changes at a time to the smallest scope that makes sense.\\n\\n\",\n  \"timestamp\": \"2025-08-26T06:49:23.523Z\"\n}",
+  "respondedAt": "2025-08-26T06:49:23.546Z",
+  "comments": [
+    {
+      "type": "general",
+      "comment": "Great, but it is important that this is split into different tasks and commits. I want fx. login backend, login frontend into seperate commits. isolate responsibility of changes at a time to the smallest scope that makes sense.",
+      "timestamp": "2025-08-26T06:49:20.273Z",
+      "id": "comment_1756190960273_vrt1kn157"
+    }
+  ]
+}

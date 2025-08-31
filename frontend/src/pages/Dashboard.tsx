@@ -1,50 +1,171 @@
-import { Component, createSignal, onMount } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
+import { Component, Show, For, createSignal } from "solid-js";
+import { useAuth } from "../contexts/AuthContext";
+import { useUser } from "../contexts/UserContext";
+import { CreateWatcherRequest, WatcherSummary } from "../services/watcherApi";
+import UserProfile from "../components/dashboard/UserProfile";
+import ServiceConnections from "../components/dashboard/ServiceConnections";
+import DashboardStats from "../components/dashboard/DashboardStats";
+import WatcherOverview from "../components/dashboard/WatcherOverview";
+import WatcherModal from "../components/watchers/WatcherModal";
+import SyncHistory from "../components/dashboard/SyncHistory";
+import SyncPreview from "../components/watchers/SyncPreview";
 
 const Dashboard: Component = () => {
-  const [userData, setUserData] = createSignal<any>(null);
-  const [loading, setLoading] = createSignal(true);
-  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const {
+    dashboardData,
+    isLoadingDashboard,
+    dashboardError,
+    watchers,
+    isLoadingWatchers,
+    watchersError,
+    serviceConnections,
+    isLoadingConnections,
+    connectionsError,
+    retryDashboard,
+    retryWatchers,
+    retryConnections,
+    refreshAll,
+    disconnectService,
+    startWatcher,
+    stopWatcher,
+    createWatcher,
+  } = useUser();
 
-  onMount(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+  const [isRefreshing, setIsRefreshing] = createSignal(false);
+  
+  // Watcher modal state
+  const [isWatcherModalOpen, setIsWatcherModalOpen] = createSignal(false);
+  const [editingWatcher, setEditingWatcher] = createSignal<WatcherSummary | undefined>(undefined);
+  const [isCreatingWatcher, setIsCreatingWatcher] = createSignal(false);
+  const [watcherError, setWatcherError] = createSignal<string | null>(null);
+  const [watcherFieldErrors, setWatcherFieldErrors] = createSignal<Record<string, string>>({});
 
-    try {
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+  // Sync preview modal state
+  const [isSyncPreviewOpen, setIsSyncPreviewOpen] = createSignal(false);
+  const [previewWatcherName, setPreviewWatcherName] = createSignal<string>("");
 
-      if (response.ok) {
-        const data = await response.json();
-        setUserData(data);
-      } else {
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      localStorage.removeItem('token');
-      navigate('/login');
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
   };
 
-  if (loading()) {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshAll();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleDisconnectService = async (
+    service: "youtube_music" | "spotify",
+  ) => {
+    const result = await disconnectService(service);
+    if (!result.success) {
+      alert(`Failed to disconnect from ${service}: ${result.error}`);
+    }
+  };
+
+  const handleStartWatcher = async (watcherName: string) => {
+    const result = await startWatcher(watcherName);
+    if (result.success) {
+      // Success is handled by the context refreshing data
+    } else {
+      alert(`Failed to start watcher: ${result.error}`);
+    }
+  };
+
+  const handleStopWatcher = async (watcherName: string) => {
+    const result = await stopWatcher(watcherName);
+    if (result.success) {
+      // Success is handled by the context refreshing data
+    } else {
+      alert(`Failed to stop watcher: ${result.error}`);
+    }
+  };
+
+  // Watcher modal handlers
+  const handleCreateWatcher = () => {
+    setEditingWatcher(undefined);
+    setWatcherError(null);
+    setWatcherFieldErrors({});
+    setIsWatcherModalOpen(true);
+  };
+
+  const handleEditWatcher = (watcher: WatcherSummary) => {
+    setEditingWatcher(watcher);
+    setWatcherError(null);
+    setWatcherFieldErrors({});
+    setIsWatcherModalOpen(true);
+  };
+
+  const handleCloseWatcherModal = () => {
+    if (isCreatingWatcher()) return; // Prevent closing while creating
+    setIsWatcherModalOpen(false);
+    setEditingWatcher(undefined);
+    setWatcherError(null);
+    setWatcherFieldErrors({});
+  };
+
+  const handleSubmitWatcher = async (request: CreateWatcherRequest) => {
+    setIsCreatingWatcher(true);
+    setWatcherError(null);
+    setWatcherFieldErrors({});
+
+    try {
+      const result = await createWatcher(request);
+      
+      if (result.success) {
+        setIsWatcherModalOpen(false);
+        setEditingWatcher(undefined);
+        // Success is handled by the context refreshing data
+      } else {
+        if (result.field_errors) {
+          setWatcherFieldErrors(result.field_errors);
+        } else {
+          setWatcherError(result.error || "Failed to create watcher");
+        }
+      }
+    } catch (error) {
+      setWatcherError("An unexpected error occurred");
+    } finally {
+      setIsCreatingWatcher(false);
+    }
+  };
+
+  // Sync preview handlers
+  const handlePreviewWatcher = (watcherName: string) => {
+    setPreviewWatcherName(watcherName);
+    setIsSyncPreviewOpen(true);
+  };
+
+  const handleCloseSyncPreview = () => {
+    setIsSyncPreviewOpen(false);
+    setPreviewWatcherName("");
+  };
+
+  const handleExecuteSync = async (watcherName: string) => {
+    // Use the existing startWatcher functionality for now
+    // In a full implementation, this might trigger a different API call
+    await handleStartWatcher(watcherName);
+  };
+
+  // Loading spinner component for overall loading
+  const LoadingSpinner = () => (
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  );
+
+  // Overall loading state (only show if all are loading initially)
+  const isOverallLoading = () =>
+    isLoadingDashboard() && isLoadingWatchers() && isLoadingConnections() && 
+    !dashboardData() && !serviceConnections() && watchers().length === 0;
+
+  if (isOverallLoading()) {
     return (
-      <div class="flex justify-center items-center min-h-[400px]">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div class="flex flex-col justify-center items-center min-h-[400px] space-y-4">
+        <LoadingSpinner />
+        <p class="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
       </div>
     );
   }
@@ -53,32 +174,95 @@ const Dashboard: Component = () => {
     <div class="card">
       <div class="flex justify-between items-center mb-8">
         <h1 class="heading-1">Dashboard</h1>
-        <button onClick={handleLogout} class="btn btn-secondary">
-          Logout
-        </button>
+        <div class="flex space-x-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing()}
+            class="btn btn-secondary flex items-center space-x-2"
+          >
+            <Show when={isRefreshing()}>
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+            </Show>
+            <span>Refresh</span>
+          </button>
+          <button onClick={handleLogout} class="btn btn-secondary">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-8">
+        {/* User Profile Section */}
+        <UserProfile
+          dashboardData={dashboardData()}
+          isLoading={isLoadingDashboard()}
+          error={dashboardError()}
+          onRetry={retryDashboard}
+        />
+
+        {/* Dashboard Stats Section */}
+        <section>
+          <h2 class="heading-2 mb-4">Statistics</h2>
+          <DashboardStats
+            dashboardData={dashboardData()}
+            isLoading={isLoadingDashboard()}
+            error={dashboardError()}
+            onRetry={retryDashboard}
+          />
+        </section>
+
+        {/* Service Connections Section */}
+        <ServiceConnections
+          serviceConnections={serviceConnections()}
+          isLoading={isLoadingConnections()}
+          error={connectionsError()}
+          onRetry={retryConnections}
+          onDisconnect={handleDisconnectService}
+        />
+
+        {/* Watchers Section */}
+        <WatcherOverview
+          watchers={watchers()}
+          isLoading={isLoadingWatchers()}
+          error={watchersError()}
+          onRetry={retryWatchers}
+          onStartWatcher={handleStartWatcher}
+          onStopWatcher={handleStopWatcher}
+          onEditWatcher={handleEditWatcher}
+          onPreviewWatcher={handlePreviewWatcher}
+          onCreateWatcher={handleCreateWatcher}
+        />
+
+        {/* Recent Activity Section */}
+        <Show when={watchers().length > 0 && watchers()[0]?.id}>
+          <SyncHistory
+            watcherId={watchers()[0].id}
+            limit={5}
+            showWatcherNames={false}
+          />
+        </Show>
       </div>
       
-      {userData() && (
-        <div class="space-y-4">
-          <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-50">Welcome, {userData().name}!</h2>
-            <p class="text-gray-600 dark:text-gray-200">Email: {userData().email}</p>
-          </div>
-          
-          {/* Add your dashboard content here */}
-          <div class="mt-8">
-            <h2 class="heading-2 mb-4">Your Playlists</h2>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Playlist cards will go here */}
-              <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <p class="text-gray-600 dark:text-gray-200">No playlists yet</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Watcher Modal */}
+      <WatcherModal
+        isOpen={isWatcherModalOpen()}
+        watcher={editingWatcher()}
+        isLoading={isCreatingWatcher()}
+        error={watcherError()}
+        fieldErrors={watcherFieldErrors()}
+        onSubmit={handleSubmitWatcher}
+        onClose={handleCloseWatcherModal}
+      />
+      
+      {/* Sync Preview Modal */}
+      <SyncPreview
+        isOpen={isSyncPreviewOpen()}
+        watcherName={previewWatcherName()}
+        onClose={handleCloseSyncPreview}
+        onExecuteSync={handleExecuteSync}
+      />
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

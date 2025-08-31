@@ -13,10 +13,10 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public error_code?: string,
-    public field_errors?: Record<string, string>
+    public field_errors?: Record<string, string>,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -25,14 +25,18 @@ export class ApiClient {
   private maxRetries: number;
   private retryDelay: number;
 
-  constructor(baseUrl: string = '', maxRetries: number = 3, retryDelay: number = 1000) {
+  constructor(
+    baseUrl: string = "",
+    maxRetries: number = 3,
+    retryDelay: number = 1000,
+  ) {
     this.baseUrl = baseUrl;
     this.maxRetries = maxRetries;
     this.retryDelay = retryDelay;
   }
 
   private async delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private shouldRetry(status: number, attempt: number): boolean {
@@ -43,28 +47,28 @@ export class ApiClient {
   private async makeRequest<T>(
     url: string,
     options: RequestInit,
-    attempt: number = 0
+    attempt: number = 0,
   ): Promise<ApiResponse<T>> {
     try {
       const fullUrl = `${this.baseUrl}${url}`;
-      
+
       // Default headers
       const defaultHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       };
 
       const response = await fetch(fullUrl, {
         ...options,
         headers: defaultHeaders,
-        credentials: 'include', // Important for session cookies
+        credentials: "include", // Important for session cookies
       });
 
       // Handle different response types
       let data: any;
-      const contentType = response.headers.get('Content-Type');
-      
-      if (contentType?.includes('application/json')) {
+      const contentType = response.headers.get("Content-Type");
+
+      if (contentType?.includes("application/json")) {
         data = await response.json();
       } else {
         data = await response.text();
@@ -78,20 +82,21 @@ export class ApiClient {
         }
 
         // Create ApiError with structured error information
-        const errorMessage = typeof data === 'object' && data?.error 
-          ? data.error 
-          : `HTTP ${response.status}: ${response.statusText}`;
-        
+        const errorMessage =
+          typeof data === "object" && data?.error
+            ? data.error
+            : `HTTP ${response.status}: ${response.statusText}`;
+
         throw new ApiError(
           errorMessage,
           response.status,
           data?.error_code,
-          data?.field_errors
+          data?.field_errors,
         );
       }
 
       // Return structured response
-      if (typeof data === 'object' && data !== null) {
+      if (typeof data === "object" && data !== null) {
         return {
           success: true,
           data,
@@ -102,7 +107,6 @@ export class ApiClient {
           data: data as T,
         };
       }
-
     } catch (error) {
       // Handle network errors and other exceptions
       if (error instanceof ApiError) {
@@ -117,30 +121,38 @@ export class ApiClient {
 
       // Final failure
       throw new ApiError(
-        error instanceof Error ? error.message : 'Network error occurred',
-        0
+        error instanceof Error ? error.message : "Network error occurred",
+        0,
       );
     }
   }
 
   async get<T>(url: string, headers?: HeadersInit): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(url, { 
-      method: 'GET',
+    return this.makeRequest<T>(url, {
+      method: "GET",
       headers,
     });
   }
 
-  async post<T>(url: string, data?: any, headers?: HeadersInit): Promise<ApiResponse<T>> {
+  async post<T>(
+    url: string,
+    data?: any,
+    headers?: HeadersInit,
+  ): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(url, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T>(url: string, data?: any, headers?: HeadersInit): Promise<ApiResponse<T>> {
+  async put<T>(
+    url: string,
+    data?: any,
+    headers?: HeadersInit,
+  ): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(url, {
-      method: 'PUT',
+      method: "PUT",
       headers,
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -148,7 +160,7 @@ export class ApiClient {
 
   async delete<T>(url: string, headers?: HeadersInit): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(url, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
     });
   }
