@@ -19,6 +19,7 @@ interface AuthContextType {
   user: () => User | null;
   isAuthenticated: () => boolean;
   isLoading: () => boolean;
+  hasInitiallyChecked: () => boolean;
 
   // Actions
   login: (credentials: LoginRequest) => Promise<LoginResult>;
@@ -47,6 +48,7 @@ const AuthContext = createContext<AuthContextType>();
 export const AuthProvider: ParentComponent = (props) => {
   const [user, setUser] = createSignal<User | null>(null);
   const [isLoading, setIsLoading] = createSignal(true);
+  const [hasInitiallyChecked, setHasInitiallyChecked] = createSignal(false);
 
   // Check if user is authenticated
   const isAuthenticated = () => user() !== null;
@@ -67,9 +69,10 @@ export const AuthProvider: ParentComponent = (props) => {
         setUser(null);
       }
     } catch (error) {
-      console.warn("💥 Auth check failed with exception:", error);
+      console.error("💥 Auth check failed with exception:", error);
       setUser(null);
     } finally {
+      setHasInitiallyChecked(true);
       console.log("🏁 checkAuth finished, setting loading to false");
       setIsLoading(false);
     }
@@ -83,6 +86,7 @@ export const AuthProvider: ParentComponent = (props) => {
 
       if (result.success) {
         setUser(result.data);
+        setHasInitiallyChecked(true); // Mark as checked since we just logged in successfully
         return { success: true };
       } else {
         return {
@@ -112,6 +116,7 @@ export const AuthProvider: ParentComponent = (props) => {
 
       if (result.success) {
         setUser(result.data);
+        setHasInitiallyChecked(true); // Mark as checked since we just registered successfully
         return { success: true };
       } else {
         return {
@@ -146,9 +151,11 @@ export const AuthProvider: ParentComponent = (props) => {
     }
   };
 
-  // Check authentication on mount
+  // Check authentication on mount (only if we haven't already checked via login/register)
   onMount(() => {
-    checkAuth();
+    if (!hasInitiallyChecked()) {
+      checkAuth();
+    }
   });
 
   // Periodic session validation (every 5 minutes)
@@ -174,6 +181,7 @@ export const AuthProvider: ParentComponent = (props) => {
     user,
     isAuthenticated,
     isLoading,
+    hasInitiallyChecked,
     login,
     register,
     logout,

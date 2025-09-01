@@ -35,6 +35,12 @@ export const ProtectedRoute: ParentComponent<ProtectedRouteProps> = (props) => {
       return;
     }
 
+    // If auth context has already checked initially (login/register or initial mount), we're good
+    if (auth.hasInitiallyChecked()) {
+      setHasCheckedAuth(true);
+      return;
+    }
+
     // Wait for initial auth check to complete
     if (auth.isLoading()) return;
 
