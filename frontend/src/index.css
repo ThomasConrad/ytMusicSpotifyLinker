@@ -67,4 +67,4 @@
   .heading-2 {
     @apply text-2xl sm:text-3xl font-semibold text-primary-800 dark:text-primary-100 mb-4;
   }
-} 
+}

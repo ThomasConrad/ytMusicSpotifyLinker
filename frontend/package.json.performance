@@ -1,0 +1,35 @@
+{
+  "scripts": {
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "build:analyze": "vite build --mode analyze",
+    "build:profile": "vite build --profile",
+    "lighthouse": "npx lighthouse http://localhost:5173 --output html --output-path ./lighthouse-report.html --chrome-flags='--headless'",
+    "perf:audit": "npm run build && npm run lighthouse",
+    "size-limit": "npx size-limit",
+    "deps:check": "npx depcheck",
+    "deps:unused": "npx unimported",
+    "bundle:visualize": "npx rollup-plugin-visualizer dist/stats.html"
+  },
+  "devDependencies": {
+    "vite-bundle-analyzer": "^0.7.0",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "size-limit": "^8.2.6",
+    "@size-limit/preset-app": "^8.2.6",
+    "lighthouse": "^11.4.0",
+    "depcheck": "^1.4.7",
+    "unimported": "^1.31.1"
+  },
+  "size-limit": [
+    {
+      "name": "Main bundle",
+      "path": "dist/assets/*.js",
+      "limit": "500 KB",
+      "webpack": false
+    },
+    {
+      "name": "CSS bundle",
+      "path": "dist/assets/*.css",
+      "limit": "100 KB"
+    }
+  ]
+}

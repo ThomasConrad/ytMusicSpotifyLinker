@@ -1,183 +1,52 @@
-import { Component, createSignal, onMount } from "solid-js";
-import { A } from "@solidjs/router";
+import { Component } from 'solid-js';
 
 const About: Component = () => {
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-
-  onMount(() => {
-    const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
-  });
-
   return (
-    <div class="max-w-4xl mx-auto space-y-8">
-      <div class="card animate-zoom-in hover:shadow-lg transition-all duration-300">
-        <h1 class="heading-1 text-center animate-fade-in">
-          About YT Music Spotify Linker
-        </h1>
-        <p
-          class="text-gray-600 dark:text-gray-200 text-lg mb-6 animate-slide-up"
-          style={{ "animation-delay": "100ms" }}
-        >
-          A seamless way to transfer your playlists between YouTube Music and
-          Spotify.
+    <div class="max-w-4xl mx-auto py-8 space-y-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-6">
+        About YT Music Spotify Linker
+      </h1>
+      
+      <div class="prose dark:prose-invert max-w-none">
+        <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+          YT Music Spotify Linker is a powerful tool that helps you seamlessly synchronize 
+          your music playlists between YouTube Music and Spotify, eliminating the hassle 
+          of manually recreating playlists across platforms.
         </p>
-      </div>
 
-      <div class="grid gap-8 md:grid-cols-2">
-        <div class="card">
-          <h2 class="heading-2 mb-4">How It Works</h2>
-          <div class="space-y-4">
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 dark:text-blue-300 font-bold">
-                  1
-                </span>
-              </div>
-              <div>
-                <h3 class="font-semibold text-gray-900 dark:text-gray-50">
-                  Connect Your Accounts
-                </h3>
-                <p class="text-gray-600 dark:text-gray-200">
-                  Link your YouTube Music and Spotify accounts securely.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 dark:text-blue-300 font-bold">
-                  2
-                </span>
-              </div>
-              <div>
-                <h3 class="font-semibold text-gray-900 dark:text-gray-50">
-                  Select Playlists
-                </h3>
-                <p class="text-gray-600 dark:text-gray-200">
-                  Choose which playlists you want to transfer between services.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <span class="text-blue-600 dark:text-blue-300 font-bold">
-                  3
-                </span>
-              </div>
-              <div>
-                <h3 class="font-semibold text-gray-900 dark:text-gray-50">
-                  Transfer & Enjoy
-                </h3>
-                <p class="text-gray-600 dark:text-gray-200">
-                  Your playlists will be transferred while maintaining song
-                  order and metadata.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-4">
+          Key Features
+        </h2>
+        
+        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300 mb-6">
+          <li>Automatic playlist synchronization between YouTube Music and Spotify</li>
+          <li>Smart song matching using advanced algorithms</li>
+          <li>Preview sync changes before applying them</li>
+          <li>Real-time sync monitoring and history</li>
+          <li>Secure OAuth integration with both platforms</li>
+          <li>Clean, modern interface with dark mode support</li>
+        </ul>
 
-        <div class="card">
-          <h2 class="heading-2 mb-4">Features</h2>
-          <ul class="space-y-4">
-            <li class="flex items-start space-x-3">
-              <svg
-                class="h-6 w-6 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span class="text-gray-600 dark:text-gray-200">
-                Bidirectional transfers between YouTube Music and Spotify
-              </span>
-            </li>
-            <li class="flex items-start space-x-3">
-              <svg
-                class="h-6 w-6 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span class="text-gray-600 dark:text-gray-200">
-                Preserves playlist order and metadata
-              </span>
-            </li>
-            <li class="flex items-start space-x-3">
-              <svg
-                class="h-6 w-6 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span class="text-gray-600 dark:text-gray-200">
-                Smart matching for different song versions
-              </span>
-            </li>
-            <li class="flex items-start space-x-3">
-              <svg
-                class="h-6 w-6 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span class="text-gray-600 dark:text-gray-200">
-                Secure authentication with OAuth
-              </span>
-            </li>
-          </ul>
-        </div>
-      </div>
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-4">
+          How It Works
+        </h2>
+        
+        <ol class="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300 mb-6">
+          <li>Connect your YouTube Music and Spotify accounts securely</li>
+          <li>Create "watchers" to monitor specific playlists</li>
+          <li>Preview what changes will be made before syncing</li>
+          <li>Let the system automatically keep your playlists in sync</li>
+        </ol>
 
-      <div class="card">
-        <h2 class="heading-2 mb-4">Get Started</h2>
-        <p class="text-gray-600 dark:text-gray-200 mb-4">
-          Ready to transfer your playlists?{" "}
-          {isAuthenticated()
-            ? "Head to your dashboard to get started."
-            : "Create an account and connect your music services to get started."}
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-gray-50 mb-4">
+          Privacy & Security
+        </h2>
+        
+        <p class="text-gray-600 dark:text-gray-300">
+          Your privacy is our priority. We use secure OAuth protocols to connect to your 
+          music accounts and never store your passwords. All data is encrypted and your 
+          playlist information is only used for synchronization purposes.
         </p>
-        <div class="flex space-x-4">
-          {isAuthenticated() ? (
-            <A href="/dashboard" class="btn btn-primary">
-              Go to Dashboard
-            </A>
-          ) : (
-            <A href="/login" class="btn btn-primary">
-              Login
-            </A>
-          )}
-          <A href="/" class="btn btn-secondary">
-            Back to Home
-          </A>
-        </div>
       </div>
     </div>
   );

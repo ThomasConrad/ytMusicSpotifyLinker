@@ -1,70 +1,29 @@
 // Authentication API service
 
-import { apiClient, ApiResponse } from "./apiClient";
-
-// Types matching backend API responses
-export interface User {
-  id: number;
-  username: string;
-}
-
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  user?: User;
-}
-
-export interface RegisterRequest {
-  username: string;
-  password: string;
-}
-
-export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  user?: User;
-}
-
-export interface LogoutResponse {
-  success: boolean;
-  message: string;
-}
-
-// Authentication result types for easier handling
-export type AuthResult<T> =
-  | {
-      success: true;
-      data: T;
-    }
-  | {
-      success: false;
-      error: string;
-      error_code?: string;
-      field_errors?: Record<string, string>;
-    };
+import { apiClient, ApiError } from './apiClient';
+import {
+  User,
+  LoginRequest,
+  RegisterRequest,
+  LoginResponse,
+  RegisterResponse,
+  LogoutResponse,
+  AuthResult
+} from '@/types';
 
 export class AuthApiService {
-  private basePath = "/api/auth";
+  private basePath = '/auth';
 
   /**
    * Login with username and password
    */
   async login(credentials: LoginRequest): Promise<AuthResult<User>> {
     try {
-      const response: ApiResponse<LoginResponse> = await apiClient.post(
+      const response = await apiClient.post<LoginResponse>(
         `${this.basePath}/login`,
-        credentials,
+        credentials
       );
 
-      console.log("Login API response:", response);
-      console.log("Login API response.data:", response.data);
-
-      // The backend response is directly in response.data
       if (response.data?.success && response.data.user) {
         return {
           success: true,
@@ -73,15 +32,22 @@ export class AuthApiService {
       } else {
         return {
           success: false,
-          error: response.data?.message || "Login failed",
+          error: response.data?.message || 'Login failed',
         };
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+          field_errors: error.field_errors,
+        };
+      }
+      
       return {
         success: false,
-        error: error.message || "Login failed",
-        error_code: error.error_code,
-        field_errors: error.field_errors,
+        error: 'Login failed due to network error',
       };
     }
   }
@@ -91,13 +57,10 @@ export class AuthApiService {
    */
   async register(userData: RegisterRequest): Promise<AuthResult<User>> {
     try {
-      const response: ApiResponse<RegisterResponse> = await apiClient.post(
+      const response = await apiClient.post<RegisterResponse>(
         `${this.basePath}/register`,
-        userData,
+        userData
       );
-
-      console.log("Register API response:", response);
-      console.log("Register API response.data:", response.data);
 
       if (response.data?.success && response.data.user) {
         return {
@@ -107,15 +70,22 @@ export class AuthApiService {
       } else {
         return {
           success: false,
-          error: response.data?.message || "Registration failed",
+          error: response.data?.message || 'Registration failed',
         };
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+          field_errors: error.field_errors,
+        };
+      }
+      
       return {
         success: false,
-        error: error.message || "Registration failed",
-        error_code: error.error_code,
-        field_errors: error.field_errors,
+        error: 'Registration failed due to network error',
       };
     }
   }
@@ -125,8 +95,8 @@ export class AuthApiService {
    */
   async logout(): Promise<AuthResult<void>> {
     try {
-      const response: ApiResponse<LogoutResponse> = await apiClient.post(
-        `${this.basePath}/logout`,
+      const response = await apiClient.post<LogoutResponse>(
+        `${this.basePath}/logout`
       );
 
       if (response.data?.success) {
@@ -137,14 +107,21 @@ export class AuthApiService {
       } else {
         return {
           success: false,
-          error: response.data?.message || "Logout failed",
+          error: response.data?.message || 'Logout failed',
         };
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+        };
+      }
+      
       return {
         success: false,
-        error: error.message || "Logout failed",
-        error_code: error.error_code,
+        error: 'Logout failed due to network error',
       };
     }
   }
@@ -154,14 +131,8 @@ export class AuthApiService {
    */
   async getCurrentUser(): Promise<AuthResult<User>> {
     try {
-      const response: ApiResponse<User> = await apiClient.get(
-        `${this.basePath}/profile`,
-      );
+      const response = await apiClient.get<User>(`${this.basePath}/profile`);
 
-      console.log("Profile API response:", response);
-      console.log("Profile API response.data:", response.data);
-
-      // The backend profile endpoint returns user data directly, apiClient wraps it in success object
       if (response.success && response.data) {
         return {
           success: true,
@@ -170,23 +141,25 @@ export class AuthApiService {
       } else {
         return {
           success: false,
-          error: "Failed to get user profile",
+          error: 'Failed to get user profile',
         };
       }
-    } catch (error: any) {
-      // Handle 401 Unauthorized as expected for unauthenticated users
-      if (error.status === 401) {
-        return {
-          success: false,
-          error: "Not authenticated",
-          error_code: "UNAUTHORIZED",
-        };
+    } catch (error) {
+      if (error instanceof ApiError) {
+        // Handle 401 Unauthorized as expected for unauthenticated users
+        if (error.status === 401) {
+          return {
+            success: false,
+            error: 'Not authenticated',
+            error_code: 'UNAUTHORIZED',
+          };
+        }
       }
       
       return {
         success: false,
-        error: error.message || "Failed to get user profile",
-        error_code: error.error_code,
+        error: 'Failed to get user profile',
+        error_code: error instanceof ApiError ? error.error_code : undefined,
       };
     }
   }

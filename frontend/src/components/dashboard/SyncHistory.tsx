@@ -1,275 +1,292 @@
-import { Component, createSignal, Show, For, onMount } from "solid-js";
-import { watcherApi, SyncHistoryResponse, SyncOperationSummary } from "../../services/watcherApi";
-import SyncActivityItem from "../watchers/SyncActivityItem";
+import { Component, Show, For, createSignal, createEffect } from 'solid-js';
+import { LoadingSpinner, Button } from '@/components/ui';
+import { SyncActivity } from '@/types';
+import { userApi } from '@/services/userApi';
+import { useUser } from '@/contexts/UserContext';
 
-interface SyncHistoryProps {
-  watcherId?: number; // If provided, shows history for specific watcher
-  limit?: number; // Number of items per page, default 10
-  showWatcherNames?: boolean; // Whether to show watcher names (for global history)
+export interface SyncHistoryProps {
+  class?: string;
 }
 
-const SyncHistory: Component<SyncHistoryProps> = (props) => {
-  const [syncHistory, setSyncHistory] = createSignal<SyncHistoryResponse | null>(null);
+export const SyncHistory: Component<SyncHistoryProps> = (props) => {
+  // Local state for sync history
+  const [syncHistory, setSyncHistory] = createSignal<SyncActivity[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  
+  // Filter and pagination state
+  const [selectedWatcher, setSelectedWatcher] = createSignal<number | null>(null);
   const [currentPage, setCurrentPage] = createSignal(1);
-  const [statusFilter, setStatusFilter] = createSignal<string>("all");
+  const [limit] = createSignal(10);
 
-  const perPage = () => props.limit || 10;
+  // Get watchers from UserContext for filtering
+  const { watchers } = useUser();
 
-  const loadSyncHistory = async (page: number = 1) => {
-    if (!props.watcherId) return; // For now, we need a specific watcher ID
-
+  // Load sync history
+  const loadSyncHistory = async () => {
     setIsLoading(true);
     setError(null);
-
+    
     try {
-      const result = await watcherApi.getWatcherSyncHistory(
-        props.watcherId,
-        page,
-        perPage()
+      const result = await userApi.getSyncHistory(
+        limit() * currentPage(), 
+        selectedWatcher() || undefined
       );
-
+      
       if (result.success) {
         setSyncHistory(result.data);
-        setCurrentPage(page);
       } else {
-        setError(result.error || "Failed to load sync history");
+        setError(result.error);
       }
-    } catch (err: any) {
-      setError("Failed to load sync history");
+    } catch (err) {
+      setError('Failed to load sync history');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredOperations = (): SyncOperationSummary[] => {
-    if (!syncHistory()) return [];
-    
-    const operations = syncHistory()!.operations;
-    if (statusFilter() === "all") {
-      return operations;
-    }
-    
-    return operations.filter(op => 
-      op.status.toLowerCase() === statusFilter().toLowerCase()
-    );
-  };
-
-  const handlePageChange = (page: number) => {
-    loadSyncHistory(page);
-  };
-
-  const handleFilterChange = (filter: string) => {
-    setStatusFilter(filter);
-    // Note: In a real implementation, we might want to filter on the server side
-    // For now, we'll filter client-side within the current page
-  };
-
-  onMount(() => {
-    if (props.watcherId) {
-      loadSyncHistory(1);
-    }
+  // Load on mount and when filters change
+  createEffect(() => {
+    loadSyncHistory();
   });
 
-  const LoadingSpinner = () => (
-    <div class="flex items-center justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>
-  );
+  const handleRetry = () => {
+    loadSyncHistory();
+  };
 
-  const ErrorDisplay = () => (
-    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <svg
-            class="w-5 h-5 text-red-400 mr-2"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <p class="text-red-800 dark:text-red-200">{error()}</p>
-        </div>
-        <button
-          onClick={() => loadSyncHistory(currentPage())}
-          class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 transition-colors duration-200"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
+  const handleWatcherFilter = (watcherId: number | null) => {
+    setSelectedWatcher(watcherId);
+    setCurrentPage(1); // Reset to first page when changing filters
+  };
 
-  const EmptyState = () => (
-    <div class="text-center py-8">
-      <svg
-        class="w-12 h-12 text-gray-400 mx-auto mb-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-        />
-      </svg>
-      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50 mb-2">
-        No sync history
-      </h3>
-      <p class="text-gray-600 dark:text-gray-400">
-        {statusFilter() === "all" 
-          ? "This watcher hasn't performed any sync operations yet."
-          : `No ${statusFilter()} sync operations found.`
-        }
-      </p>
-    </div>
-  );
+  const handleLoadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
 
-  const Pagination = () => {
-    const history = syncHistory();
-    if (!history?.pagination || history.pagination.total_pages <= 1) return null;
-
-    const { page, total_pages } = history.pagination;
-    const pages = [];
-    
-    // Simple pagination: show current page and neighbors
-    const start = Math.max(1, page - 2);
-    const end = Math.min(total_pages, page + 2);
-    
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
+  const getStatusColor = (status: 'success' | 'error' | 'partial') => {
+    switch (status) {
+      case 'success':
+        return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900';
+      case 'error':
+        return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900';
+      case 'partial':
+        return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900';
+      default:
+        return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700';
     }
+  };
 
-    return (
-      <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
-        <div class="text-sm text-gray-600 dark:text-gray-400">
-          Showing page {page} of {total_pages} ({history.pagination.total_count} total operations)
-        </div>
-        <div class="flex space-x-1">
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1 || isLoading()}
-            class="px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-          >
-            Previous
-          </button>
-          <For each={pages}>
-            {(pageNum) => (
-              <button
-                onClick={() => handlePageChange(pageNum)}
-                disabled={isLoading()}
-                class={`px-3 py-1 rounded text-sm border transition-colors duration-200 ${
-                  pageNum === page
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                {pageNum}
-              </button>
-            )}
-          </For>
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === total_pages || isLoading()}
-            class="px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    );
+  const getStatusIcon = (status: 'success' | 'error' | 'partial') => {
+    switch (status) {
+      case 'success':
+        return (
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      case 'error':
+        return (
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        );
+      case 'partial':
+        return (
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        );
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString();
+    } catch {
+      return 'Unknown time';
+    }
+  };
+
+  const getRelativeTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      
+      if (diffHours < 1) return 'Less than an hour ago';
+      if (diffHours < 24) return `${diffHours} hours ago`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) return `${diffDays} days ago`;
+      
+      return date.toLocaleDateString();
+    } catch {
+      return 'Unknown time';
+    }
   };
 
   return (
-    <section>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="heading-2">Recent Activity</h2>
+    <section class={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 ${props.class || ''}`} aria-label="Sync History">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-50" id="sync-history-heading">
+          Sync History
+        </h2>
         
-        {/* Status Filter */}
-        <div class="flex items-center space-x-2">
-          <label class="text-sm text-gray-600 dark:text-gray-400">Filter:</label>
-          <select
-            value={statusFilter()}
-            onChange={(e) => handleFilterChange(e.currentTarget.value)}
-            class="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700"
-            disabled={isLoading()}
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-            <option value="running">Running</option>
-          </select>
+        <div class="flex space-x-2 items-center">
+          {/* Watcher filter dropdown */}
+          <Show when={watchers().length > 0}>
+            <label class="sr-only" for="watcher-filter">Filter by watcher</label>
+            <select
+              id="watcher-filter"
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              value={selectedWatcher() || ''}
+              onChange={(e) => {
+                const value = e.currentTarget.value;
+                handleWatcherFilter(value ? parseInt(value, 10) : null);
+              }}
+              aria-label="Filter sync history by watcher"
+            >
+              <option value="">All watchers</option>
+              <For each={watchers()}>
+                {(watcher) => (
+                  <option value={watcher.id}>{watcher.name}</option>
+                )}
+              </For>
+            </select>
+          </Show>
+          
+          <Show when={!isLoading() && !error()}>
+            <Button variant="secondary" size="sm" onClick={handleRetry}>
+              Refresh
+            </Button>
+          </Show>
         </div>
       </div>
 
       <Show
-        when={!isLoading()}
-        fallback={<LoadingSpinner />}
+        when={!isLoading() && !error()}
+        fallback={
+          <Show
+            when={error()}
+            fallback={
+              <div class="flex items-center justify-center py-8">
+                <LoadingSpinner size="md" />
+              </div>
+            }
+          >
+            <div class="text-center py-8">
+              <div class="text-red-600 dark:text-red-400 mb-4">
+                {error()}
+              </div>
+              <Button variant="secondary" size="sm" onClick={handleRetry}>
+                Retry
+              </Button>
+            </div>
+          </Show>
+        }
       >
         <Show
-          when={!error()}
-          fallback={<ErrorDisplay />}
-        >
-          <Show
-            when={filteredOperations().length > 0}
-            fallback={<EmptyState />}
-          >
-            <div class="space-y-3">
-              <For each={filteredOperations()}>
-                {(operation) => (
-                  <SyncActivityItem
-                    operation={operation}
-                    watcherName={props.showWatcherNames ? syncHistory()?.watcher_name : undefined}
-                    showWatcherName={props.showWatcherNames}
-                  />
-                )}
-              </For>
-            </div>
-            <Pagination />
-          </Show>
-        </Show>
-      </Show>
-
-      <Show when={!props.watcherId}>
-        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <div class="flex items-start">
-            <svg
-              class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            <div>
-              <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
-                Watcher Required
+          when={syncHistory().length > 0}
+          fallback={
+            <div class="text-center py-12">
+              <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50 mb-2">
+                No sync history
               </h3>
-              <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                Please select a watcher to view its sync history.
+              <p class="text-gray-500 dark:text-gray-400">
+                Sync activities will appear here once you start running watchers.
               </p>
             </div>
+          }
+        >
+          <div class="space-y-4">
+            <For each={syncHistory()}>
+              {(activity) => (
+                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                  <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                      <div class="flex items-center space-x-2 mb-1">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
+                          {activity.watcherName}
+                        </h3>
+                        
+                        <div class={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
+                          {getStatusIcon(activity.status)}
+                          <span class="capitalize">{activity.status}</span>
+                        </div>
+                      </div>
+                      
+                      <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span title={formatTimestamp(activity.timestamp)}>
+                          {getRelativeTime(activity.timestamp)}
+                        </span>
+                        
+                        <Show when={activity.status !== 'error'}>
+                          <div class="flex items-center space-x-3">
+                            <span class="flex items-center space-x-1">
+                              <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                              <span>{activity.songsAdded} added</span>
+                            </span>
+                            
+                            <Show when={activity.songsSkipped > 0}>
+                              <span class="flex items-center space-x-1">
+                                <svg class="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{activity.songsSkipped} skipped</span>
+                              </span>
+                            </Show>
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Show when={activity.error}>
+                    <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
+                      <div class="flex items-start space-x-2">
+                        <svg class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <div>
+                          <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                            Sync Error
+                          </h4>
+                          <p class="text-sm text-red-700 dark:text-red-300">
+                            {activity.error}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Show>
+                </div>
+              )}
+            </For>
+
+            {/* Load more button if there might be more data */}
+            <Show when={syncHistory().length >= limit()}>
+              <div class="text-center pt-4">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleLoadMore}
+                  loading={isLoading()}
+                >
+                  Load More
+                </Button>
+              </div>
+            </Show>
           </div>
-        </div>
+        </Show>
       </Show>
     </section>
   );
 };
-
-export default SyncHistory;

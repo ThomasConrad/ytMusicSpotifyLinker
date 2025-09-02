@@ -1,59 +1,61 @@
-import { Component, createSignal, Show } from "solid-js";
-import { CreateWatcherRequest, WatcherSummary } from "../../services/watcherApi";
+import { Component, createSignal, Show } from 'solid-js';
+import { Button, Input } from '@/components/ui';
+import { WatcherSummary, CreateWatcherRequest, ServiceType } from '@/types';
 
-interface WatcherFormProps {
-  watcher?: WatcherSummary; // For editing existing watcher
-  isLoading: boolean;
-  error: string | null;
-  fieldErrors: Record<string, string>;
+export interface WatcherFormProps {
+  watcher?: WatcherSummary;
+  fieldErrors: () => Record<string, string>;
+  isLoading: () => boolean;
   onSubmit: (request: CreateWatcherRequest) => void;
   onCancel: () => void;
 }
 
-const WatcherForm: Component<WatcherFormProps> = (props) => {
-  // Form state
-  const [name, setName] = createSignal(props.watcher?.name || "");
-  const [sourceService, setSourceService] = createSignal(props.watcher?.source_service || "");
-  const [sourcePlaylistId, setSourcePlaylistId] = createSignal(props.watcher?.source_playlist_id || "");
-  const [targetService, setTargetService] = createSignal(props.watcher?.target_service || "");
-  const [targetPlaylistId, setTargetPlaylistId] = createSignal(props.watcher?.target_playlist_id || "");
-  const [syncFrequency, setSyncFrequency] = createSignal(props.watcher?.sync_frequency || 24);
+export const WatcherForm: Component<WatcherFormProps> = (props) => {
+  const [formData, setFormData] = createSignal<CreateWatcherRequest>({
+    name: props.watcher?.name || '',
+    sourceService: props.watcher?.sourceService || 'youtube_music',
+    targetService: props.watcher?.targetService || 'spotify',
+    sourcePlaylistId: '',
+    createNewPlaylist: true,
+    newPlaylistName: '',
+  });
 
-  // Local validation errors
   const [localErrors, setLocalErrors] = createSignal<Record<string, string>>({});
 
-  const services = [
-    { value: "youtube_music", label: "YouTube Music" },
-    { value: "spotify", label: "Spotify" },
-  ];
+  const updateField = <K extends keyof CreateWatcherRequest>(
+    field: K,
+    value: CreateWatcherRequest[K]
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear local error when user starts typing
+    if (localErrors()[field]) {
+      setLocalErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
+    const data = formData();
 
-    if (!name().trim()) {
-      errors.name = "Watcher name is required";
-    } else if (name().trim().length < 3) {
-      errors.name = "Watcher name must be at least 3 characters";
+    if (!data.name.trim()) {
+      errors.name = 'Watcher name is required';
     }
 
-    if (!sourceService()) {
-      errors.source_service = "Source service is required";
+    if (!data.sourcePlaylistId.trim()) {
+      errors.sourcePlaylistId = 'Source playlist ID is required';
     }
 
-    if (!sourcePlaylistId().trim()) {
-      errors.source_playlist_id = "Source playlist ID is required";
+    if (data.createNewPlaylist) {
+      if (!data.newPlaylistName?.trim()) {
+        errors.newPlaylistName = 'New playlist name is required';
+      }
+    } else if (!data.targetPlaylistId?.trim()) {
+      errors.targetPlaylistId = 'Target playlist ID is required';
     }
 
-    if (!targetService()) {
-      errors.target_service = "Target service is required";
-    }
-
-    if (sourceService() === targetService()) {
-      errors.target_service = "Target service must be different from source service";
-    }
-
-    if (syncFrequency() < 1 || syncFrequency() > 168) {
-      errors.sync_frequency = "Sync frequency must be between 1 and 168 hours";
+    if (data.sourceService === data.targetService) {
+      errors.targetService = 'Target service must be different from source service';
     }
 
     setLocalErrors(errors);
@@ -63,297 +65,177 @@ const WatcherForm: Component<WatcherFormProps> = (props) => {
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
-    const request: CreateWatcherRequest = {
-      name: name().trim(),
-      source_service: sourceService(),
-      source_playlist_id: sourcePlaylistId().trim(),
-      target_service: targetService(),
-      target_playlist_id: targetPlaylistId().trim() || undefined,
-      sync_frequency: syncFrequency(),
-    };
-
-    props.onSubmit(request);
+    props.onSubmit(formData());
   };
 
-  const getFieldError = (fieldName: string): string | undefined => {
-    return props.fieldErrors[fieldName] || localErrors()[fieldName];
+  const getError = (field: string) => {
+    return props.fieldErrors()[field] || localErrors()[field] || '';
   };
 
-  const isEditing = () => !!props.watcher;
+  const serviceOptions: { value: ServiceType; label: string }[] = [
+    { value: 'youtube_music', label: 'YouTube Music' },
+    { value: 'spotify', label: 'Spotify' },
+  ];
 
   return (
     <form onSubmit={handleSubmit} class="space-y-6">
-      {/* General error message */}
-      <Show when={props.error}>
-        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg animate-shake">
-          {props.error}
-        </div>
-      </Show>
-
       {/* Watcher Name */}
-      <div>
-        <label
-          for="watcher-name"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Watcher Name *
-        </label>
-        <input
-          type="text"
-          id="watcher-name"
-          value={name()}
-          onInput={(e) => {
-            setName(e.currentTarget.value);
-            setLocalErrors({ ...localErrors(), name: "" });
-          }}
-          class={`input transition-all duration-300 ${
-            getFieldError("name")
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }`}
-          placeholder="e.g., My Favorites Sync"
-          disabled={props.isLoading}
-          required
-        />
-        <Show when={getFieldError("name")}>
-          <p class="text-red-600 dark:text-red-400 text-sm mt-1 animate-shake">
-            {getFieldError("name")}
-          </p>
-        </Show>
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          A descriptive name for this watcher
-        </p>
+      <Input
+        type="text"
+        label="Watcher Name"
+        value={formData().name}
+        onInput={(e) => updateField('name', e.currentTarget.value)}
+        error={getError('name')}
+        disabled={props.isLoading()}
+        placeholder="e.g., My Favorites Sync"
+        required
+      />
+
+      {/* Service Selection */}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Source Service
+          </label>
+          <select
+            value={formData().sourceService}
+            onChange={(e) => updateField('sourceService', e.currentTarget.value as ServiceType)}
+            disabled={props.isLoading()}
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-50 transition-colors duration-200"
+            required
+          >
+            {serviceOptions.map((option) => (
+              <option value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Target Service
+          </label>
+          <select
+            value={formData().targetService}
+            onChange={(e) => updateField('targetService', e.currentTarget.value as ServiceType)}
+            disabled={props.isLoading()}
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-50 transition-colors duration-200"
+            required
+          >
+            {serviceOptions.map((option) => (
+              <option value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <Show when={getError('targetService')}>
+            <p class="text-sm text-red-600 dark:text-red-400 mt-1">
+              {getError('targetService')}
+            </p>
+          </Show>
+        </div>
       </div>
 
-      {/* Source Service */}
-      <div>
-        <label
-          for="source-service"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Source Service *
-        </label>
-        <select
-          id="source-service"
-          value={sourceService()}
-          onChange={(e) => {
-            setSourceService(e.currentTarget.value);
-            setLocalErrors({ ...localErrors(), source_service: "", target_service: "" });
-          }}
-          class={`input transition-all duration-300 ${
-            getFieldError("source_service")
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }`}
-          disabled={props.isLoading || isEditing()}
-          required
-        >
-          <option value="">Select source service</option>
-          {services.map((service) => (
-            <option value={service.value}>{service.label}</option>
-          ))}
-        </select>
-        <Show when={getFieldError("source_service")}>
-          <p class="text-red-600 dark:text-red-400 text-sm mt-1 animate-shake">
-            {getFieldError("source_service")}
-          </p>
-        </Show>
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          The service to sync FROM
-        </p>
-      </div>
+      {/* Source Playlist */}
+      <Input
+        type="text"
+        label="Source Playlist ID"
+        value={formData().sourcePlaylistId}
+        onInput={(e) => updateField('sourcePlaylistId', e.currentTarget.value)}
+        error={getError('sourcePlaylistId')}
+        disabled={props.isLoading()}
+        placeholder="Enter the playlist ID from the source service"
+        helperText="You can find this in the playlist URL or share link"
+        required
+      />
 
-      {/* Source Playlist ID */}
-      <div>
-        <label
-          for="source-playlist-id"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Source Playlist ID *
+      {/* Target Configuration */}
+      <div class="space-y-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Target Configuration
         </label>
-        <input
-          type="text"
-          id="source-playlist-id"
-          value={sourcePlaylistId()}
-          onInput={(e) => {
-            setSourcePlaylistId(e.currentTarget.value);
-            setLocalErrors({ ...localErrors(), source_playlist_id: "" });
-          }}
-          class={`input transition-all duration-300 ${
-            getFieldError("source_playlist_id")
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }`}
-          placeholder="Playlist ID from the source service"
-          disabled={props.isLoading || isEditing()}
-          required
-        />
-        <Show when={getFieldError("source_playlist_id")}>
-          <p class="text-red-600 dark:text-red-400 text-sm mt-1 animate-shake">
-            {getFieldError("source_playlist_id")}
-          </p>
-        </Show>
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          The ID of the playlist to sync from
-        </p>
-      </div>
+        
+        <div class="space-y-3">
+          <label class="flex items-center">
+            <input
+              type="radio"
+              name="targetType"
+              checked={formData().createNewPlaylist}
+              onChange={() => updateField('createNewPlaylist', true)}
+              disabled={props.isLoading()}
+              class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              Create new playlist
+            </span>
+          </label>
 
-      {/* Target Service */}
-      <div>
-        <label
-          for="target-service"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Target Service *
-        </label>
-        <select
-          id="target-service"
-          value={targetService()}
-          onChange={(e) => {
-            setTargetService(e.currentTarget.value);
-            setLocalErrors({ ...localErrors(), target_service: "" });
-          }}
-          class={`input transition-all duration-300 ${
-            getFieldError("target_service")
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }`}
-          disabled={props.isLoading || isEditing()}
-          required
-        >
-          <option value="">Select target service</option>
-          {services.map((service) => (
-            <option 
-              value={service.value} 
-              disabled={service.value === sourceService()}
-            >
-              {service.label}
-            </option>
-          ))}
-        </select>
-        <Show when={getFieldError("target_service")}>
-          <p class="text-red-600 dark:text-red-400 text-sm mt-1 animate-shake">
-            {getFieldError("target_service")}
-          </p>
-        </Show>
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          The service to sync TO
-        </p>
-      </div>
+          <Show when={formData().createNewPlaylist}>
+            <div class="ml-6">
+              <Input
+                type="text"
+                label="New Playlist Name"
+                value={formData().newPlaylistName || ''}
+                onInput={(e) => updateField('newPlaylistName', e.currentTarget.value)}
+                error={getError('newPlaylistName')}
+                disabled={props.isLoading()}
+                placeholder="Enter name for the new playlist"
+                required={formData().createNewPlaylist}
+              />
+            </div>
+          </Show>
 
-      {/* Target Playlist ID */}
-      <div>
-        <label
-          for="target-playlist-id"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Target Playlist ID
-        </label>
-        <input
-          type="text"
-          id="target-playlist-id"
-          value={targetPlaylistId()}
-          onInput={(e) => setTargetPlaylistId(e.currentTarget.value)}
-          class="input transition-all duration-300"
-          placeholder="Leave empty to create a new playlist"
-          disabled={props.isLoading}
-        />
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          Optional: Specify a playlist ID, or leave empty to create a new one
-        </p>
-      </div>
+          <label class="flex items-center">
+            <input
+              type="radio"
+              name="targetType"
+              checked={!formData().createNewPlaylist}
+              onChange={() => updateField('createNewPlaylist', false)}
+              disabled={props.isLoading()}
+              class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              Use existing playlist
+            </span>
+          </label>
 
-      {/* Sync Frequency */}
-      <div>
-        <label
-          for="sync-frequency"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-        >
-          Sync Frequency (hours) *
-        </label>
-        <input
-          type="number"
-          id="sync-frequency"
-          min="1"
-          max="168"
-          value={syncFrequency()}
-          onInput={(e) => {
-            setSyncFrequency(parseInt(e.currentTarget.value) || 24);
-            setLocalErrors({ ...localErrors(), sync_frequency: "" });
-          }}
-          class={`input transition-all duration-300 ${
-            getFieldError("sync_frequency")
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }`}
-          disabled={props.isLoading}
-          required
-        />
-        <Show when={getFieldError("sync_frequency")}>
-          <p class="text-red-600 dark:text-red-400 text-sm mt-1 animate-shake">
-            {getFieldError("sync_frequency")}
-          </p>
-        </Show>
-        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
-          How often to check for changes (1-168 hours)
-        </p>
+          <Show when={!formData().createNewPlaylist}>
+            <div class="ml-6">
+              <Input
+                type="text"
+                label="Target Playlist ID"
+                value={formData().targetPlaylistId || ''}
+                onInput={(e) => updateField('targetPlaylistId', e.currentTarget.value)}
+                error={getError('targetPlaylistId')}
+                disabled={props.isLoading()}
+                placeholder="Enter existing playlist ID"
+                helperText="The playlist must already exist on the target service"
+                required={!formData().createNewPlaylist}
+              />
+            </div>
+          </Show>
+        </div>
       </div>
 
       {/* Form Actions */}
-      <div class="flex space-x-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-        <button
+      <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-600">
+        <Button
           type="button"
+          variant="secondary"
           onClick={props.onCancel}
-          disabled={props.isLoading}
-          class="btn btn-secondary flex-1"
+          disabled={props.isLoading()}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        
+        <Button
           type="submit"
-          disabled={props.isLoading}
-          class={`btn btn-primary flex-1 transition-all duration-300 ${
-            props.isLoading ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          variant="primary"
+          loading={props.isLoading()}
+          disabled={props.isLoading()}
         >
-          <Show
-            when={!props.isLoading}
-            fallback={
-              <div class="flex items-center justify-center">
-                <svg
-                  class="animate-spin -ml-1 mr-2 h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {isEditing() ? "Updating..." : "Creating..."}
-              </div>
-            }
-          >
-            {isEditing() ? "Update Watcher" : "Create Watcher"}
-          </Show>
-        </button>
+          {props.watcher ? 'Update Watcher' : 'Create Watcher'}
+        </Button>
       </div>
     </form>
   );
 };
-
-export default WatcherForm;

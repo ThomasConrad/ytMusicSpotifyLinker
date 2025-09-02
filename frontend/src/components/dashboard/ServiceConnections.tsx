@@ -1,151 +1,248 @@
-import { Component, Show, For } from "solid-js";
-import { ServiceConnectionsResponse } from "../../services/userApi";
+import { Component, Show, For, createSignal } from 'solid-js';
+import { LoadingSpinner, Button } from '@/components/ui';
+import { ServiceConnection } from '@/types';
 
-interface ServiceConnectionsProps {
-  serviceConnections: ServiceConnectionsResponse | null;
-  isLoading: boolean;
-  error: string | null;
+export interface ServiceConnectionsProps {
+  serviceConnections: () => ServiceConnection[];
+  isLoading: () => boolean;
+  error: () => string | null;
   onRetry: () => void;
-  onDisconnect: (service: "youtube_music" | "spotify") => void;
+  onDisconnect: (service: 'youtube_music' | 'spotify') => void;
 }
 
-const ServiceConnections: Component<ServiceConnectionsProps> = (props) => {
-  const LoadingSpinner = () => (
-    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-  );
+export const ServiceConnections: Component<ServiceConnectionsProps> = (props) => {
+  const [disconnecting, setDisconnecting] = createSignal<string | null>(null);
 
-  const ErrorDisplay = () => (
-    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <svg
-            class="w-5 h-5 text-red-400 mr-2"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <p class="text-red-800 dark:text-red-200">{props.error}</p>
-        </div>
-        <button
-          onClick={props.onRetry}
-          class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
+  const handleDisconnect = async (service: 'youtube_music' | 'spotify') => {
+    const confirmed = confirm(`Are you sure you want to disconnect from ${service === 'youtube_music' ? 'YouTube Music' : 'Spotify'}?`);
+    if (!confirmed) return;
 
-  const handleDisconnect = (service: "youtube_music" | "spotify") => {
-    const confirmed = confirm(
-      `Are you sure you want to disconnect from ${service.replace("_", " ")}?`,
-    );
-    if (confirmed) {
-      props.onDisconnect(service);
+    setDisconnecting(service);
+    try {
+      await props.onDisconnect(service);
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const getServiceIcon = (service: string) => {
+    switch (service) {
+      case 'youtube_music':
+        return (
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+          </svg>
+        );
+      case 'spotify':
+        return (
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.746 3.808-.871 7.077-.496 9.712 1.115.295.18.387.563.207.857zm1.223-2.723c-.226.367-.706.482-1.073.256-2.687-1.652-6.785-2.131-9.965-1.166-.405.123-.834-.082-.957-.487-.123-.405.082-.834.487-.957 3.632-1.102 8.147-.568 11.252 1.327.367.226.482.706.256 1.073zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.485.148-.997-.126-1.145-.611-.148-.485.126-.997.611-1.145 3.532-1.073 9.404-.866 13.115 1.338.445.264.591.837.327 1.282-.264.445-.837.591-1.282.327z"/>
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getServiceName = (service: string) => {
+    switch (service) {
+      case 'youtube_music':
+        return 'YouTube Music';
+      case 'spotify':
+        return 'Spotify';
+      default:
+        return service;
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return 'Unknown';
     }
   };
 
   return (
-    <section>
-      <h2 class="heading-2 mb-4">Service Connections</h2>
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6" aria-label="Service Connections">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-50" id="connections-heading">
+          Service Connections
+        </h2>
+        
+        <Show when={!props.isLoading() && !props.error()}>
+          <Button variant="secondary" size="sm" onClick={props.onRetry}>
+            Refresh
+          </Button>
+        </Show>
+      </div>
+
       <Show
-        when={!props.isLoading && props.serviceConnections}
+        when={!props.isLoading() && !props.error()}
         fallback={
-          <div class="space-y-4">
-            <Show when={props.error}>
-              <ErrorDisplay />
-            </Show>
-            <Show when={props.isLoading}>
-              <div class="flex items-center space-x-2">
-                <LoadingSpinner />
-                <span class="text-gray-600 dark:text-gray-400">
-                  Loading service connections...
-                </span>
+          <Show
+            when={props.error()}
+            fallback={
+              <div class="flex items-center justify-center py-8">
+                <LoadingSpinner size="md" />
               </div>
-            </Show>
-          </div>
+            }
+          >
+            <div class="text-center py-8">
+              <div class="text-red-600 dark:text-red-400 mb-4">
+                {props.error()}
+              </div>
+              <Button variant="secondary" size="sm" onClick={props.onRetry}>
+                Retry
+              </Button>
+            </div>
+          </Show>
         }
       >
-        <div class="grid gap-4 md:grid-cols-2">
-          <For each={props.serviceConnections?.connections}>
+        <div class="space-y-4">
+          <For
+            each={props.serviceConnections()}
+            fallback={
+              <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                No service connections found
+              </div>
+            }
+          >
             {(connection) => (
-              <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                  <h3 class="font-semibold text-gray-900 dark:text-gray-50 capitalize">
-                    {connection.service.replace("_", " ")}
-                  </h3>
-                  <div class="flex items-center space-x-2">
-                    <span
-                      class={`px-2 py-1 rounded-full text-xs font-medium ${
-                        connection.is_connected
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                      }`}
+              <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class={`flex-shrink-0 ${
+                      connection.service === 'youtube_music' 
+                        ? 'text-red-600 dark:text-red-400' 
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {getServiceIcon(connection.service)}
+                    </div>
+                    
+                    <div class="flex-1">
+                      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
+                        {getServiceName(connection.service)}
+                      </h3>
+                      
+                      <div class="flex items-center space-x-2 mt-1">
+                        <div class={`w-2 h-2 rounded-full ${
+                          connection.connected 
+                            ? 'bg-green-500' 
+                            : 'bg-red-500'
+                        }`} />
+                        <span class={`text-sm font-medium ${
+                          connection.connected
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {connection.connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                      </div>
+                      
+                      <Show when={connection.connected && connection.username}>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Connected as: {connection.username}
+                        </p>
+                      </Show>
+                      
+                      <Show when={connection.connectedAt}>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Connected: {formatDate(connection.connectedAt)}
+                        </p>
+                      </Show>
+                      
+                      <Show when={connection.lastRefresh}>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                          Last refresh: {formatDate(connection.lastRefresh)}
+                        </p>
+                      </Show>
+                    </div>
+                  </div>
+                  
+                  <div class="flex-shrink-0">
+                    <Show
+                      when={connection.connected}
+                      fallback={
+                        <Button 
+                          variant="primary" 
+                          size="sm"
+                          onClick={() => {
+                            // In a real implementation, this would trigger OAuth flow
+                            alert(`Connect to ${getServiceName(connection.service)} - OAuth flow would start here`);
+                          }}
+                        >
+                          Connect
+                        </Button>
+                      }
                     >
-                      {connection.is_connected ? "Connected" : "Disconnected"}
-                    </span>
-                    {connection.requires_reauth && (
-                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        Reauth Required
-                      </span>
-                    )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={disconnecting() === connection.service}
+                        onClick={() => handleDisconnect(connection.service)}
+                      >
+                        Disconnect
+                      </Button>
+                    </Show>
                   </div>
                 </div>
-                <Show when={connection.is_connected}>
-                  <div class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                    <Show when={connection.last_successful_auth}>
-                      <p>
-                        Last auth:{" "}
-                        {new Date(
-                          connection.last_successful_auth!,
-                        ).toLocaleDateString()}
-                      </p>
-                    </Show>
-                    <Show when={connection.expires_at}>
-                      <p>
-                        Expires:{" "}
-                        {new Date(
-                          connection.expires_at!,
-                        ).toLocaleDateString()}
-                      </p>
-                    </Show>
-                    <button
-                      onClick={() =>
-                        handleDisconnect(
-                          connection.service as "youtube_music" | "spotify",
-                        )
-                      }
-                      class="mt-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-sm transition-colors duration-200"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </Show>
-                <Show when={!connection.is_connected}>
-                  <div class="mt-2">
-                    <button class="btn btn-primary text-sm">
-                      Connect {connection.service.replace("_", " ")}
-                    </button>
-                  </div>
-                </Show>
               </div>
             )}
           </For>
+          
+          {/* Add placeholder services if none exist */}
+          <Show when={props.serviceConnections().length === 0}>
+            <div class="space-y-4">
+              {['youtube_music', 'spotify'].map((service) => (
+                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                      <div class={`flex-shrink-0 text-gray-400 ${
+                        service === 'youtube_music' 
+                          ? 'dark:text-gray-500' 
+                          : 'dark:text-gray-500'
+                      }`}>
+                        {getServiceIcon(service)}
+                      </div>
+                      
+                      <div class="flex-1">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
+                          {getServiceName(service)}
+                        </h3>
+                        
+                        <div class="flex items-center space-x-2 mt-1">
+                          <div class="w-2 h-2 rounded-full bg-red-500" />
+                          <span class="text-sm font-medium text-red-600 dark:text-red-400">
+                            Not Connected
+                          </span>
+                        </div>
+                        
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Connect your {getServiceName(service)} account to start syncing playlists
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div class="flex-shrink-0">
+                      <Button 
+                        variant="primary" 
+                        size="sm"
+                        onClick={() => {
+                          alert(`Connect to ${getServiceName(service)} - OAuth flow would start here`);
+                        }}
+                      >
+                        Connect
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Show>
         </div>
       </Show>
     </section>
   );
 };
-
-export default ServiceConnections;

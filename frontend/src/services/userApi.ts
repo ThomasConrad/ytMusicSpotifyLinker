@@ -1,53 +1,22 @@
-// User Profile API service
+// User data and dashboard API service
 
-import { apiClient, ApiResponse } from "./apiClient";
-import { AuthResult } from "./authApi";
-
-// Types matching backend API responses
-export interface UserProfile {
-  id: number;
-  username: string;
-  created_at?: string;
-}
-
-export interface ServiceConnectionStatus {
-  service: string;
-  is_connected: boolean;
-  expires_at?: string;
-  last_successful_auth?: string;
-  requires_reauth: boolean;
-}
-
-export interface ServiceConnectionsResponse {
-  connections: ServiceConnectionStatus[];
-}
-
-export interface UserDashboardData {
-  profile: UserProfile;
-  service_connections: ServiceConnectionStatus[];
-  watcher_count: number;
-}
-
-export interface UpdateProfileRequest {
-  username?: string;
-}
-
-export interface ApiSuccessResponse {
-  success: boolean;
-  message: string;
-}
+import { apiClient, ApiError } from './apiClient';
+import {
+  DashboardData,
+  ServiceConnection,
+  SyncActivity,
+  UserResult
+} from '@/types';
 
 export class UserApiService {
-  private basePath = "/api/users";
+  private basePath = '/protected';
 
   /**
-   * Get current user profile
+   * Get dashboard data including user stats and overview
    */
-  async getProfile(): Promise<AuthResult<UserProfile>> {
+  async getDashboard(): Promise<UserResult<DashboardData>> {
     try {
-      const response: ApiResponse<UserProfile> = await apiClient.get(
-        `${this.basePath}/profile`,
-      );
+      const response = await apiClient.get<DashboardData>(`${this.basePath}/dashboard`);
 
       if (response.success && response.data) {
         return {
@@ -57,29 +26,31 @@ export class UserApiService {
       } else {
         return {
           success: false,
-          error: "Failed to get user profile",
+          error: 'Failed to load dashboard data',
         };
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+        };
+      }
+      
       return {
         success: false,
-        error: error.message || "Failed to get user profile",
-        error_code: error.error_code,
+        error: 'Failed to load dashboard data due to network error',
       };
     }
   }
 
   /**
-   * Update user profile
+   * Get service connection status for YouTube Music and Spotify
    */
-  async updateProfile(
-    updates: UpdateProfileRequest,
-  ): Promise<AuthResult<UserProfile>> {
+  async getServiceConnections(): Promise<UserResult<ServiceConnection[]>> {
     try {
-      const response: ApiResponse<UserProfile> = await apiClient.put(
-        `${this.basePath}/profile`,
-        updates,
-      );
+      const response = await apiClient.get<ServiceConnection[]>(`${this.basePath}/connections`);
 
       if (response.success && response.data) {
         return {
@@ -89,74 +60,21 @@ export class UserApiService {
       } else {
         return {
           success: false,
-          error: "Failed to update profile",
+          error: 'Failed to load service connections',
         };
       }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || "Failed to update profile",
-        error_code: error.error_code,
-        field_errors: error.field_errors,
-      };
-    }
-  }
-
-  /**
-   * Get dashboard data including profile, connections, and watcher count
-   */
-  async getDashboardData(): Promise<AuthResult<UserDashboardData>> {
-    try {
-      const response: ApiResponse<UserDashboardData> = await apiClient.get(
-        `${this.basePath}/dashboard`,
-      );
-
-      if (response.success && response.data) {
-        return {
-          success: true,
-          data: response.data,
-        };
-      } else {
+    } catch (error) {
+      if (error instanceof ApiError) {
         return {
           success: false,
-          error: "Failed to get dashboard data",
+          error: error.message,
+          error_code: error.error_code,
         };
       }
-    } catch (error: any) {
+      
       return {
         success: false,
-        error: error.message || "Failed to get dashboard data",
-        error_code: error.error_code,
-      };
-    }
-  }
-
-  /**
-   * Get service connection status
-   */
-  async getServiceConnections(): Promise<
-    AuthResult<ServiceConnectionsResponse>
-  > {
-    try {
-      const response: ApiResponse<ServiceConnectionsResponse> =
-        await apiClient.get(`${this.basePath}/connections`);
-
-      if (response.success && response.data) {
-        return {
-          success: true,
-          data: response.data,
-        };
-      } else {
-        return {
-          success: false,
-          error: "Failed to get service connections",
-        };
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || "Failed to get service connections",
-        error_code: error.error_code,
+        error: 'Failed to load service connections due to network error',
       };
     }
   }
@@ -164,15 +82,13 @@ export class UserApiService {
   /**
    * Disconnect from a service (YouTube Music or Spotify)
    */
-  async disconnectService(
-    service: "youtube_music" | "spotify",
-  ): Promise<AuthResult<void>> {
+  async disconnectService(service: 'youtube_music' | 'spotify'): Promise<UserResult<void>> {
     try {
-      const response: ApiResponse<ApiSuccessResponse> = await apiClient.delete(
-        `${this.basePath}/connections/${service}`,
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        `${this.basePath}/connections/${service}/disconnect`
       );
 
-      if (response.success && response.data?.success) {
+      if (response.data?.success) {
         return {
           success: true,
           data: undefined,
@@ -180,14 +96,62 @@ export class UserApiService {
       } else {
         return {
           success: false,
-          error: response.data?.message || "Failed to disconnect service",
+          error: response.data?.message || `Failed to disconnect from ${service}`,
         };
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+        };
+      }
+      
       return {
         success: false,
-        error: error.message || "Failed to disconnect service",
-        error_code: error.error_code,
+        error: `Failed to disconnect from ${service} due to network error`,
+      };
+    }
+  }
+
+  /**
+   * Get sync activity history
+   */
+  async getSyncHistory(limit?: number, watcherId?: number): Promise<UserResult<SyncActivity[]>> {
+    try {
+      const params = new URLSearchParams();
+      if (limit) params.append('limit', limit.toString());
+      if (watcherId) params.append('watcher_id', watcherId.toString());
+      
+      const queryString = params.toString();
+      const endpoint = `${this.basePath}/sync-history${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await apiClient.get<SyncActivity[]>(endpoint);
+
+      if (response.success && response.data) {
+        return {
+          success: true,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Failed to load sync history',
+        };
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return {
+          success: false,
+          error: error.message,
+          error_code: error.error_code,
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'Failed to load sync history due to network error',
       };
     }
   }

@@ -1,166 +1,99 @@
-import { ParentComponent, createEffect, createSignal, Show } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-import { useAuth } from "../../contexts/AuthContext";
+import { Component, Show, createEffect } from 'solid-js';
+import { useNavigate, useLocation } from '@solidjs/router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ProtectedRouteProps {
   children: any;
   redirectTo?: string;
-  fallback?: () => any;
-  requireAuth?: boolean;
 }
 
-/**
- * ProtectedRoute component that guards routes requiring authentication.
- * Features:
- * - Session validity checking via API
- * - Automatic redirects for unauthenticated users
- * - Loading states during authentication checks
- * - Custom fallback components for unauthenticated state
- * - Session expiration detection and handling
- */
-export const ProtectedRoute: ParentComponent<ProtectedRouteProps> = (props) => {
-  const auth = useAuth();
+export const ProtectedRoute: Component<ProtectedRouteProps> = (props) => {
+  const { isAuthenticated, isLoading, hasInitiallyChecked } = useAuth();
   const navigate = useNavigate();
-  const [hasCheckedAuth, setHasCheckedAuth] = createSignal(false);
-  const [sessionExpired, setSessionExpired] = createSignal(false);
+  const location = useLocation();
 
-  const requireAuth = props.requireAuth ?? true;
-  const redirectTo = props.redirectTo || "/login";
-
-  // Handle authentication state changes and redirects
   createEffect(() => {
-    // Skip if we don't require auth for this route
-    if (!requireAuth) {
-      setHasCheckedAuth(true);
-      return;
-    }
-
-    // If auth context has already checked initially (login/register or initial mount), we're good
-    if (auth.hasInitiallyChecked()) {
-      setHasCheckedAuth(true);
-      return;
-    }
-
     // Wait for initial auth check to complete
-    if (auth.isLoading()) return;
-
-    setHasCheckedAuth(true);
-
-    // Check for session expiration
-    if (!auth.isAuthenticated() && auth.user() !== null) {
-      // User was previously authenticated but now is not - session likely expired
-      setSessionExpired(true);
-      console.warn("Session expired, redirecting to login");
-    }
-
-    // Redirect if not authenticated and no custom fallback
-    if (!auth.isAuthenticated() && !props.fallback) {
-      const currentPath = window.location.pathname;
-
-      // Avoid redirect loops
-      if (currentPath !== redirectTo) {
-        // Preserve the intended destination for post-login redirect
-        if (currentPath !== "/login") {
-          sessionStorage.setItem("redirectAfterLogin", currentPath);
-        }
-
-        navigate(redirectTo, { replace: true });
+    if (!hasInitiallyChecked()) return;
+    
+    // If not authenticated after check is complete, redirect to login
+    if (!isAuthenticated() && !isLoading()) {
+      const redirectTo = props.redirectTo || '/login';
+      const returnTo = location.pathname !== '/' ? location.pathname : undefined;
+      
+      if (returnTo) {
+        navigate(`${redirectTo}?returnTo=${encodeURIComponent(returnTo)}`);
+      } else {
+        navigate(redirectTo);
       }
     }
   });
 
-  // Show loading spinner while checking authentication
-  if (!hasCheckedAuth() || auth.isLoading()) {
-    return (
-      <div class="flex items-center justify-center min-h-screen">
-        <div class="flex flex-col items-center space-y-4">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p class="text-gray-600 dark:text-gray-400 animate-pulse">
-            {sessionExpired()
-              ? "Session expired, redirecting..."
-              : "Checking authentication..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show custom fallback if provided and not authenticated
-  if (!auth.isAuthenticated() && props.fallback) {
-    return props.fallback();
-  }
-
-  // Show children if authenticated or if auth not required
   return (
-    <Show when={!requireAuth || auth.isAuthenticated()} fallback={null}>
-      {props.children}
+    <Show 
+      when={hasInitiallyChecked() && isAuthenticated()} 
+      fallback={
+        <Show when={!isLoading()}>
+          <div class="flex items-center justify-center min-h-screen" role="main" aria-live="polite">
+            <div class="text-center">
+              <div 
+                class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"
+                role="status"
+                aria-label="Checking authentication"
+              ></div>
+              <p class="mt-4 text-gray-600 dark:text-gray-400">Verifying your session...</p>
+            </div>
+          </div>
+        </Show>
+      }
+    >
+      <main role="main">
+        {props.children}
+      </main>
     </Show>
   );
 };
 
-/**
- * Higher-order component for protecting entire route components
- */
-export const withProtectedRoute = <P extends object>(
-  Component: (props: P) => any,
-  options?: Omit<ProtectedRouteProps, "children">,
-) => {
-  return (props: P) => (
-    <ProtectedRoute {...options}>
-      <Component {...props} />
-    </ProtectedRoute>
-  );
-};
-
-/**
- * Component for routes that should only be accessible when NOT authenticated
- * (e.g., login, register pages)
- */
-export const GuestRoute: ParentComponent<{
+// Guest route component (opposite of protected route)
+export interface GuestRouteProps {
+  children: any;
   redirectTo?: string;
-  fallback?: () => any;
-}> = (props) => {
-  const auth = useAuth();
+}
+
+export const GuestRoute: Component<GuestRouteProps> = (props) => {
+  const { isAuthenticated, hasInitiallyChecked } = useAuth();
   const navigate = useNavigate();
-  const redirectTo = props.redirectTo || "/dashboard";
 
   createEffect(() => {
-    // Wait for auth check to complete
-    if (auth.isLoading()) return;
-
-    // Redirect if authenticated
-    if (auth.isAuthenticated()) {
-      // Check for intended destination after login
-      const intendedDestination = sessionStorage.getItem("redirectAfterLogin");
-      if (intendedDestination) {
-        sessionStorage.removeItem("redirectAfterLogin");
-        navigate(intendedDestination, { replace: true });
-      } else {
-        navigate(redirectTo, { replace: true });
-      }
+    // Wait for initial auth check to complete
+    if (!hasInitiallyChecked()) return;
+    
+    // If authenticated, redirect to dashboard or specified route
+    if (isAuthenticated()) {
+      const redirectTo = props.redirectTo || '/dashboard';
+      navigate(redirectTo);
     }
   });
 
-  // Show loading while checking auth
-  if (auth.isLoading()) {
-    return (
-      <div class="flex items-center justify-center min-h-screen">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  // Show custom fallback if authenticated and fallback provided
-  if (auth.isAuthenticated() && props.fallback) {
-    return props.fallback();
-  }
-
-  // Show children only if not authenticated
   return (
-    <Show when={!auth.isAuthenticated()} fallback={null}>
-      {props.children}
+    <Show 
+      when={hasInitiallyChecked() && !isAuthenticated()}
+      fallback={
+        <div class="flex items-center justify-center min-h-screen" role="main" aria-live="polite">
+          <div class="text-center">
+            <div 
+              class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"
+              role="status"
+              aria-label="Loading"
+            ></div>
+            <p class="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <main role="main">
+        {props.children}
+      </main>
     </Show>
   );
 };
-
-export default ProtectedRoute;

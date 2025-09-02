@@ -5,13 +5,13 @@ import {
   useContext,
   ParentComponent,
   onMount,
-} from "solid-js";
+} from 'solid-js';
+import { authApi } from '@/services/authApi';
 import {
-  authApi,
   User,
   LoginRequest,
   RegisterRequest,
-} from "../services/authApi";
+} from '@/types';
 
 // Authentication state and methods
 interface AuthContextType {
@@ -55,25 +55,19 @@ export const AuthProvider: ParentComponent = (props) => {
 
   // Check authentication status on mount
   const checkAuth = async () => {
-    console.log("🔍 Starting checkAuth...");
     setIsLoading(true);
     try {
-      console.log("📞 Calling authApi.getCurrentUser()...");
       const result = await authApi.getCurrentUser();
-      console.log("📋 getCurrentUser result:", result);
       if (result.success) {
-        console.log("✅ Auth successful, setting user:", result.data);
         setUser(result.data);
       } else {
-        console.log("❌ Auth failed:", result.error);
         setUser(null);
       }
     } catch (error) {
-      console.error("💥 Auth check failed with exception:", error);
+      console.error('Auth check failed:', error);
       setUser(null);
     } finally {
       setHasInitiallyChecked(true);
-      console.log("🏁 checkAuth finished, setting loading to false");
       setIsLoading(false);
     }
   };
@@ -99,7 +93,7 @@ export const AuthProvider: ParentComponent = (props) => {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || "Login failed",
+        error: error.message || 'Login failed',
       };
     } finally {
       setIsLoading(false);
@@ -129,7 +123,7 @@ export const AuthProvider: ParentComponent = (props) => {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || "Registration failed",
+        error: error.message || 'Registration failed',
       };
     } finally {
       setIsLoading(false);
@@ -142,7 +136,7 @@ export const AuthProvider: ParentComponent = (props) => {
     try {
       await authApi.logout();
     } catch (error) {
-      console.warn("Logout API call failed:", error);
+      console.warn('Logout API call failed:', error);
       // Continue with local logout even if API call fails
     } finally {
       // Clear user state regardless of API result
@@ -166,7 +160,7 @@ export const AuthProvider: ParentComponent = (props) => {
       async () => {
         const isValid = await authApi.checkAuthentication();
         if (!isValid && user()) {
-          console.warn("Session expired, clearing user state");
+          console.warn('Session expired, clearing user state');
           setUser(null);
         }
       },
@@ -199,14 +193,7 @@ export const AuthProvider: ParentComponent = (props) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
-
-// Note: ProtectedRoute has been moved to components/auth/ProtectedRoute.tsx
-// This export is kept for backward compatibility during migration
-export {
-  ProtectedRoute,
-  type ProtectedRouteProps,
-} from "../components/auth/ProtectedRoute";
