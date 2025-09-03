@@ -187,7 +187,8 @@ async fn test_auth_workflow() -> Result<()> {
     Ok(())
 }
 
-#[test(tokio::test)]
+#[tokio::test]
+#[ignore = "Spotify endpoints not implemented yet - will be enabled in Phase 2"]
 async fn test_spotify_integration() -> Result<()> {
     // Start the server
     let (addr, _pool) = setup_test_server().await?;

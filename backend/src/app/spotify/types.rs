@@ -112,6 +112,12 @@ pub enum SpotifyError {
     #[error("API request failed: {0}")]
     ApiRequestFailed(String),
     
+    #[error("API error: {0}")]
+    ApiError(String),
+    
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+    
     #[error("Invalid OAuth state")]
     InvalidOAuthState,
     

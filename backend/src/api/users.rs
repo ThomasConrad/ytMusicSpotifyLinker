@@ -339,6 +339,7 @@ mod tests {
                 access_token TEXT NOT NULL,
                 refresh_token TEXT,
                 expires_at DATETIME,
+                token_scope TEXT,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id),

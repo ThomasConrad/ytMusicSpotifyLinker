@@ -17,6 +17,7 @@ pub struct UserCredential {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<OffsetDateTime>,
+    pub token_scope: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }

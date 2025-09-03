@@ -16,7 +16,7 @@ use tower_sessions::{cookie::Key, session_store::Error as SessionStoreError};
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
-    api::{auth, protected, users},
+    api::{auth, protected, spotify, users},
     app::{Watcher, WatcherError},
     users::database,
     users::Backend,
@@ -56,6 +56,7 @@ impl Router {
             .with_state(self.db.clone())
             .route_layer(login_required!(Backend, login_url = "/login"))
             .merge(users::router().with_state(self.db.clone()).route_layer(login_required!(Backend, login_url = "/login")))
+            .merge(spotify::router().with_state(self.db.clone()).route_layer(login_required!(Backend, login_url = "/login")))
             .merge(auth::router(self.db.clone()))
     }
 
