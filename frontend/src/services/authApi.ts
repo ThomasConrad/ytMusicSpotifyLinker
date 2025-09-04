@@ -8,7 +8,7 @@ import {
   LoginResponse,
   RegisterResponse,
   LogoutResponse,
-  AuthResult
+  AuthResult,
 } from '@/types';
 
 export class AuthApiService {
@@ -44,7 +44,7 @@ export class AuthApiService {
           field_errors: error.field_errors,
         };
       }
-      
+
       return {
         success: false,
         error: 'Login failed due to network error',
@@ -82,7 +82,7 @@ export class AuthApiService {
           field_errors: error.field_errors,
         };
       }
-      
+
       return {
         success: false,
         error: 'Registration failed due to network error',
@@ -118,7 +118,7 @@ export class AuthApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Logout failed due to network error',
@@ -155,7 +155,7 @@ export class AuthApiService {
           };
         }
       }
-      
+
       return {
         success: false,
         error: 'Failed to get user profile',

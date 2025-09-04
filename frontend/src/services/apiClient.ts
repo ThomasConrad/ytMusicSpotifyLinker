@@ -63,7 +63,7 @@ class ApiClient {
     try {
       const response = await fetch(url, requestConfig);
       const contentType = response.headers.get('content-type');
-      
+
       let data: T;
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
@@ -76,7 +76,8 @@ class ApiClient {
         // Extract error information from response
         const errorData = data as any;
         throw new ApiError(
-          errorData?.message || `HTTP ${response.status}: ${response.statusText}`,
+          errorData?.message ||
+            `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           errorData?.error_code,
           errorData?.field_errors
@@ -101,7 +102,10 @@ class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+  async get<T>(
+    endpoint: string,
+    headers?: Record<string, string>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET', headers });
   }
 
@@ -121,7 +125,10 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'PUT', body, headers });
   }
 
-  async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+  async delete<T>(
+    endpoint: string,
+    headers?: Record<string, string>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE', headers });
   }
 

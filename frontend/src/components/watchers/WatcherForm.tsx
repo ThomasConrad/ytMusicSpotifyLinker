@@ -20,17 +20,19 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
     newPlaylistName: '',
   });
 
-  const [localErrors, setLocalErrors] = createSignal<Record<string, string>>({});
+  const [localErrors, setLocalErrors] = createSignal<Record<string, string>>(
+    {}
+  );
 
   const updateField = <K extends keyof CreateWatcherRequest>(
     field: K,
     value: CreateWatcherRequest[K]
   ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear local error when user starts typing
     if (localErrors()[field]) {
-      setLocalErrors(prev => ({ ...prev, [field]: '' }));
+      setLocalErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -55,7 +57,8 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
     }
 
     if (data.sourceService === data.targetService) {
-      errors.targetService = 'Target service must be different from source service';
+      errors.targetService =
+        'Target service must be different from source service';
     }
 
     setLocalErrors(errors);
@@ -64,7 +67,7 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     props.onSubmit(formData());
@@ -101,7 +104,9 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
           </label>
           <select
             value={formData().sourceService}
-            onChange={(e) => updateField('sourceService', e.currentTarget.value as ServiceType)}
+            onChange={(e) =>
+              updateField('sourceService', e.currentTarget.value as ServiceType)
+            }
             disabled={props.isLoading()}
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-50 transition-colors duration-200"
             required
@@ -118,7 +123,9 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
           </label>
           <select
             value={formData().targetService}
-            onChange={(e) => updateField('targetService', e.currentTarget.value as ServiceType)}
+            onChange={(e) =>
+              updateField('targetService', e.currentTarget.value as ServiceType)
+            }
             disabled={props.isLoading()}
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-50 transition-colors duration-200"
             required
@@ -153,7 +160,7 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Target Configuration
         </label>
-        
+
         <div class="space-y-3">
           <label class="flex items-center">
             <input
@@ -175,7 +182,9 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
                 type="text"
                 label="New Playlist Name"
                 value={formData().newPlaylistName || ''}
-                onInput={(e) => updateField('newPlaylistName', e.currentTarget.value)}
+                onInput={(e) =>
+                  updateField('newPlaylistName', e.currentTarget.value)
+                }
                 error={getError('newPlaylistName')}
                 disabled={props.isLoading()}
                 placeholder="Enter name for the new playlist"
@@ -204,7 +213,9 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
                 type="text"
                 label="Target Playlist ID"
                 value={formData().targetPlaylistId || ''}
-                onInput={(e) => updateField('targetPlaylistId', e.currentTarget.value)}
+                onInput={(e) =>
+                  updateField('targetPlaylistId', e.currentTarget.value)
+                }
                 error={getError('targetPlaylistId')}
                 disabled={props.isLoading()}
                 placeholder="Enter existing playlist ID"
@@ -226,7 +237,7 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
         >
           Cancel
         </Button>
-        
+
         <Button
           type="submit"
           variant="primary"

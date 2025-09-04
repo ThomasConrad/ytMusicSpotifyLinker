@@ -12,7 +12,7 @@ export interface DashboardStatsProps {
 export const DashboardStats: Component<DashboardStatsProps> = (props) => {
   const formatLastSync = (lastSyncTime?: string) => {
     if (!lastSyncTime) return 'Never';
-    
+
     try {
       const date = new Date(lastSyncTime);
       return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
@@ -27,7 +27,7 @@ export const DashboardStats: Component<DashboardStatsProps> = (props) => {
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-50">
           Statistics Overview
         </h2>
-        
+
         <Show when={!props.isLoading() && props.dashboardData()}>
           <div class="text-xs text-gray-500 dark:text-gray-400">
             Last updated: {new Date().toLocaleTimeString()}

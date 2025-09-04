@@ -11,7 +11,7 @@ export interface AppError {
 
 export enum ErrorType {
   NETWORK = 'NETWORK',
-  VALIDATION = 'VALIDATION', 
+  VALIDATION = 'VALIDATION',
   AUTHENTICATION = 'AUTHENTICATION',
   AUTHORIZATION = 'AUTHORIZATION',
   NOT_FOUND = 'NOT_FOUND',
@@ -29,7 +29,7 @@ export function createAppError(
   userMessage?: string
 ): AppError {
   const timestamp = new Date();
-  
+
   if (error instanceof Error) {
     return {
       message: error.message,
@@ -42,7 +42,7 @@ export function createAppError(
       userMessage: userMessage || getUserFriendlyMessage(error, type),
     };
   }
-  
+
   if (typeof error === 'string') {
     return {
       message: error,
@@ -51,7 +51,7 @@ export function createAppError(
       userMessage: userMessage || getUserFriendlyMessage(error, type),
     };
   }
-  
+
   if (error && typeof error === 'object') {
     const errorObj = error as any;
     return {
@@ -60,25 +60,33 @@ export function createAppError(
       type,
       details: error,
       timestamp,
-      userMessage: userMessage || getUserFriendlyMessage(errorObj.message || errorObj.error, type),
+      userMessage:
+        userMessage ||
+        getUserFriendlyMessage(errorObj.message || errorObj.error, type),
     };
   }
-  
+
   return {
     message: 'Unknown error occurred',
     type: ErrorType.UNKNOWN,
     timestamp,
-    userMessage: userMessage || 'An unexpected error occurred. Please try again.',
+    userMessage:
+      userMessage || 'An unexpected error occurred. Please try again.',
   };
 }
 
 /**
  * Converts technical error messages to user-friendly messages
  */
-export function getUserFriendlyMessage(error: unknown, type: ErrorType): string {
-  const errorMessage = typeof error === 'string' ? error : 
-    (error as any)?.message || 'Unknown error';
-    
+export function getUserFriendlyMessage(
+  error: unknown,
+  type: ErrorType
+): string {
+  const errorMessage =
+    typeof error === 'string'
+      ? error
+      : (error as any)?.message || 'Unknown error';
+
   switch (type) {
     case ErrorType.NETWORK:
       if (errorMessage.includes('fetch')) {
@@ -88,25 +96,28 @@ export function getUserFriendlyMessage(error: unknown, type: ErrorType): string 
         return 'The request took too long. Please try again.';
       }
       return 'Network error occurred. Please check your connection and try again.';
-      
+
     case ErrorType.AUTHENTICATION:
-      if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+      if (
+        errorMessage.includes('expired') ||
+        errorMessage.includes('invalid')
+      ) {
         return 'Your session has expired. Please log in again.';
       }
       if (errorMessage.includes('credentials')) {
         return 'Invalid username or password. Please try again.';
       }
       return 'Authentication failed. Please log in again.';
-      
+
     case ErrorType.AUTHORIZATION:
       return 'You do not have permission to perform this action.';
-      
+
     case ErrorType.VALIDATION:
       return 'Please check your input and try again.';
-      
+
     case ErrorType.NOT_FOUND:
       return 'The requested resource was not found.';
-      
+
     case ErrorType.SERVER:
       if (errorMessage.includes('500')) {
         return 'Server error occurred. Please try again later.';
@@ -115,10 +126,10 @@ export function getUserFriendlyMessage(error: unknown, type: ErrorType): string 
         return 'Service is temporarily unavailable. Please try again later.';
       }
       return 'Server error occurred. Please try again later.';
-      
+
     case ErrorType.CLIENT:
       return 'Invalid request. Please refresh the page and try again.';
-      
+
     default:
       return 'An unexpected error occurred. Please try again.';
   }
@@ -131,7 +142,7 @@ export function determineErrorType(error: unknown): ErrorType {
   if (error && typeof error === 'object') {
     const errorObj = error as any;
     const status = errorObj.status || errorObj.statusCode;
-    
+
     if (status) {
       if (status === 401) return ErrorType.AUTHENTICATION;
       if (status === 403) return ErrorType.AUTHORIZATION;
@@ -139,20 +150,34 @@ export function determineErrorType(error: unknown): ErrorType {
       if (status >= 400 && status < 500) return ErrorType.CLIENT;
       if (status >= 500) return ErrorType.SERVER;
     }
-    
+
     const message = errorObj.message || errorObj.error || '';
     if (typeof message === 'string') {
       const lowerMessage = message.toLowerCase();
-      if (lowerMessage.includes('network') || lowerMessage.includes('fetch') || lowerMessage.includes('connection')) {
+      if (
+        lowerMessage.includes('network') ||
+        lowerMessage.includes('fetch') ||
+        lowerMessage.includes('connection')
+      ) {
         return ErrorType.NETWORK;
       }
-      if (lowerMessage.includes('auth') || lowerMessage.includes('unauthorized') || lowerMessage.includes('token')) {
+      if (
+        lowerMessage.includes('auth') ||
+        lowerMessage.includes('unauthorized') ||
+        lowerMessage.includes('token')
+      ) {
         return ErrorType.AUTHENTICATION;
       }
-      if (lowerMessage.includes('permission') || lowerMessage.includes('forbidden')) {
+      if (
+        lowerMessage.includes('permission') ||
+        lowerMessage.includes('forbidden')
+      ) {
         return ErrorType.AUTHORIZATION;
       }
-      if (lowerMessage.includes('validation') || lowerMessage.includes('invalid')) {
+      if (
+        lowerMessage.includes('validation') ||
+        lowerMessage.includes('invalid')
+      ) {
         return ErrorType.VALIDATION;
       }
       if (lowerMessage.includes('not found')) {
@@ -160,22 +185,24 @@ export function determineErrorType(error: unknown): ErrorType {
       }
     }
   }
-  
+
   return ErrorType.UNKNOWN;
 }
 
 /**
  * Formats validation errors for display
  */
-export function formatValidationErrors(fieldErrors?: Record<string, string>): string {
+export function formatValidationErrors(
+  fieldErrors?: Record<string, string>
+): string {
   if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
     return 'Please check your input and try again.';
   }
-  
+
   const errors = Object.entries(fieldErrors)
     .map(([field, message]) => `${field}: ${message}`)
     .join('; ');
-    
+
   return errors;
 }
 
@@ -185,7 +212,7 @@ export function formatValidationErrors(fieldErrors?: Record<string, string>): st
  */
 export function logError(error: AppError, context?: string): void {
   const isDevelopment = import.meta.env?.DEV || false;
-  
+
   const logData = {
     type: error.type,
     message: error.message,
@@ -194,7 +221,7 @@ export function logError(error: AppError, context?: string): void {
     context,
     details: error.details,
   };
-  
+
   if (isDevelopment) {
     console.group(`🚨 ${error.type} Error ${context ? `(${context})` : ''}`);
     console.error('Message:', error.message);
@@ -216,9 +243,9 @@ export function logError(error: AppError, context?: string): void {
 export function handleApiError(error: unknown, context?: string): AppError {
   const errorType = determineErrorType(error);
   const appError = createAppError(error, errorType);
-  
+
   logError(appError, context);
-  
+
   return appError;
 }
 
@@ -232,29 +259,34 @@ export async function retryOperation<T>(
   exponentialBackoff: boolean = true
 ): Promise<T> {
   let lastError: unknown;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxAttempts) {
         break;
       }
-      
+
       // Don't retry certain error types
       const errorType = determineErrorType(error);
-      if (errorType === ErrorType.AUTHENTICATION || errorType === ErrorType.AUTHORIZATION) {
+      if (
+        errorType === ErrorType.AUTHENTICATION ||
+        errorType === ErrorType.AUTHORIZATION
+      ) {
         break;
       }
-      
+
       // Wait before next attempt
-      const delay = exponentialBackoff ? delayMs * Math.pow(2, attempt - 1) : delayMs;
-      await new Promise(resolve => setTimeout(resolve, delay));
+      const delay = exponentialBackoff
+        ? delayMs * Math.pow(2, attempt - 1)
+        : delayMs;
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError;
 }
 
@@ -271,9 +303,9 @@ export async function withErrorHandling<T>(
     return { data, error: null };
   } catch (error) {
     const appError = handleApiError(error, context);
-    return { 
-      data: fallbackValue || null, 
-      error: appError 
+    return {
+      data: fallbackValue || null,
+      error: appError,
     };
   }
 }
@@ -300,13 +332,19 @@ export function makeSafe<T extends any[], R>(
 /**
  * Error boundary helper for form validation
  */
-export function validateAndTransformErrors(
-  result: { success: boolean; error?: string; field_errors?: Record<string, string> }
-): { hasErrors: boolean; generalError?: string; fieldErrors?: Record<string, string> } {
+export function validateAndTransformErrors(result: {
+  success: boolean;
+  error?: string;
+  field_errors?: Record<string, string>;
+}): {
+  hasErrors: boolean;
+  generalError?: string;
+  fieldErrors?: Record<string, string>;
+} {
   if (result.success) {
     return { hasErrors: false };
   }
-  
+
   return {
     hasErrors: true,
     generalError: result.error,

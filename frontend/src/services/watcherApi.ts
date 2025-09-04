@@ -5,7 +5,7 @@ import {
   WatcherSummary,
   CreateWatcherRequest,
   SyncPreview,
-  WatcherResult
+  WatcherResult,
 } from '@/types';
 
 export class WatcherApiService {
@@ -37,7 +37,7 @@ export class WatcherApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to load watchers due to network error',
@@ -48,9 +48,14 @@ export class WatcherApiService {
   /**
    * Create a new watcher
    */
-  async createWatcher(request: CreateWatcherRequest): Promise<WatcherResult<WatcherSummary>> {
+  async createWatcher(
+    request: CreateWatcherRequest
+  ): Promise<WatcherResult<WatcherSummary>> {
     try {
-      const response = await apiClient.post<WatcherSummary>(this.basePath, request);
+      const response = await apiClient.post<WatcherSummary>(
+        this.basePath,
+        request
+      );
 
       if (response.success && response.data) {
         return {
@@ -72,7 +77,7 @@ export class WatcherApiService {
           field_errors: error.field_errors,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to create watcher due to network error',
@@ -85,9 +90,10 @@ export class WatcherApiService {
    */
   async startWatcher(watcherName: string): Promise<WatcherResult<void>> {
     try {
-      const response = await apiClient.post<{ success: boolean; message: string }>(
-        `${this.basePath}/${encodeURIComponent(watcherName)}/start`
-      );
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+      }>(`${this.basePath}/${encodeURIComponent(watcherName)}/start`);
 
       if (response.data?.success) {
         return {
@@ -108,7 +114,7 @@ export class WatcherApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to start watcher due to network error',
@@ -121,9 +127,10 @@ export class WatcherApiService {
    */
   async stopWatcher(watcherName: string): Promise<WatcherResult<void>> {
     try {
-      const response = await apiClient.post<{ success: boolean; message: string }>(
-        `${this.basePath}/${encodeURIComponent(watcherName)}/stop`
-      );
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+      }>(`${this.basePath}/${encodeURIComponent(watcherName)}/stop`);
 
       if (response.data?.success) {
         return {
@@ -144,7 +151,7 @@ export class WatcherApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to stop watcher due to network error',
@@ -157,9 +164,10 @@ export class WatcherApiService {
    */
   async deleteWatcher(watcherName: string): Promise<WatcherResult<void>> {
     try {
-      const response = await apiClient.delete<{ success: boolean; message: string }>(
-        `${this.basePath}/${encodeURIComponent(watcherName)}`
-      );
+      const response = await apiClient.delete<{
+        success: boolean;
+        message: string;
+      }>(`${this.basePath}/${encodeURIComponent(watcherName)}`);
 
       if (response.data?.success) {
         return {
@@ -180,7 +188,7 @@ export class WatcherApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to delete watcher due to network error',
@@ -191,7 +199,9 @@ export class WatcherApiService {
   /**
    * Get sync preview for a watcher
    */
-  async getSyncPreview(watcherName: string): Promise<WatcherResult<SyncPreview>> {
+  async getSyncPreview(
+    watcherName: string
+  ): Promise<WatcherResult<SyncPreview>> {
     try {
       const response = await apiClient.get<SyncPreview>(
         `${this.basePath}/${encodeURIComponent(watcherName)}/preview`
@@ -216,7 +226,7 @@ export class WatcherApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to load sync preview due to network error',

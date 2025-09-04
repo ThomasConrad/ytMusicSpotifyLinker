@@ -8,17 +8,17 @@ const Login: Component = () => {
   const { login, register, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const [isRegisterMode, setIsRegisterMode] = createSignal(false);
   const [formData, setFormData] = createSignal({ username: '', password: '' });
   const [errors, setErrors] = createSignal<Record<string, string>>({});
   const [generalError, setGeneralError] = createSignal<string | null>(null);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear field error when user starts typing
     if (errors()[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -42,7 +42,7 @@ const Login: Component = () => {
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setGeneralError(null);
@@ -105,7 +105,9 @@ const Login: Component = () => {
             type="text"
             label="Username"
             value={formData().username}
-            onInput={(e) => handleInputChange('username', e.currentTarget.value)}
+            onInput={(e) =>
+              handleInputChange('username', e.currentTarget.value)
+            }
             error={errors().username}
             disabled={isLoading()}
             required
@@ -115,7 +117,9 @@ const Login: Component = () => {
             type="password"
             label="Password"
             value={formData().password}
-            onInput={(e) => handleInputChange('password', e.currentTarget.value)}
+            onInput={(e) =>
+              handleInputChange('password', e.currentTarget.value)
+            }
             error={errors().password}
             disabled={isLoading()}
             required

@@ -24,7 +24,7 @@ Object.defineProperty(window, 'matchMedia', {
 // Test component to access theme context
 const TestComponent = () => {
   const theme = useTheme();
-  
+
   return (
     <div>
       <div data-testid="theme">{theme.theme()}</div>
@@ -37,18 +37,14 @@ const TestComponent = () => {
 };
 
 const renderWithProvider = (component: any) => {
-  return render(() => (
-    <ThemeProvider>
-      {component}
-    </ThemeProvider>
-  ));
+  return render(() => <ThemeProvider>{component}</ThemeProvider>);
 };
 
 describe('ThemeContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
-    
+
     // Mock matchMedia to return light theme by default
     mockMatchMedia.mockImplementation((query) => ({
       matches: false, // Not dark mode

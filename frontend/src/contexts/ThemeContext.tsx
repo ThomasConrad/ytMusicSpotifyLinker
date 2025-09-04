@@ -23,13 +23,16 @@ const STORAGE_KEY = 'yt-music-spotify-linker-theme';
 
 export const ThemeProvider: ParentComponent = (props) => {
   const [theme, setThemeSignal] = createSignal<Theme>('system');
-  const [resolvedTheme, setResolvedTheme] = createSignal<ResolvedTheme>('light');
+  const [resolvedTheme, setResolvedTheme] =
+    createSignal<ResolvedTheme>('light');
 
   // Get system theme preference
   const getSystemTheme = (): ResolvedTheme => {
     if (typeof window === 'undefined') return 'light';
-    
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
   };
 
   // Resolve theme based on current setting
@@ -45,7 +48,7 @@ export const ThemeProvider: ParentComponent = (props) => {
     if (typeof document === 'undefined') return;
 
     const root = document.documentElement;
-    
+
     if (resolvedTheme === 'dark') {
       root.classList.add('dark');
     } else {
@@ -56,7 +59,7 @@ export const ThemeProvider: ParentComponent = (props) => {
   // Set theme and persist to localStorage
   const setTheme = (newTheme: Theme) => {
     setThemeSignal(newTheme);
-    
+
     // Persist to localStorage
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
@@ -69,7 +72,7 @@ export const ThemeProvider: ParentComponent = (props) => {
   const toggleTheme = () => {
     const currentTheme = theme();
     const currentResolved = resolvedTheme();
-    
+
     if (currentTheme === 'system') {
       // If currently system, switch to opposite of current resolved theme
       setTheme(currentResolved === 'dark' ? 'light' : 'dark');
@@ -103,7 +106,7 @@ export const ThemeProvider: ParentComponent = (props) => {
       };
 
       mediaQuery.addEventListener('change', handleChange);
-      
+
       // Cleanup listener
       return () => mediaQuery.removeEventListener('change', handleChange);
     }

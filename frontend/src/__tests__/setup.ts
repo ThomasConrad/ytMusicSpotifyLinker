@@ -20,7 +20,7 @@ global.ResizeObserver = vi.fn(() => ({
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -107,15 +107,15 @@ vi.mock('import.meta.env', () => ({
 beforeEach(() => {
   // Clear all mocks
   vi.clearAllMocks();
-  
+
   // Reset localStorage
   localStorageMock.getItem.mockReturnValue(null);
-  
+
   // Reset location
   mockLocation.pathname = '/';
   mockLocation.search = '';
   mockLocation.hash = '';
-  
+
   // Reset console to avoid test output noise
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -131,10 +131,10 @@ process.on('unhandledRejection', (reason) => {
 export const cleanup = () => {
   // Reset all mocks
   vi.resetAllMocks();
-  
+
   // Clear timers
   vi.clearAllTimers();
-  
+
   // Reset modules
   vi.resetModules();
 };

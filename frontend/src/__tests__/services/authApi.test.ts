@@ -9,7 +9,11 @@ vi.mock('../../services/apiClient', () => ({
     post: vi.fn(),
   },
   ApiError: class MockApiError extends Error {
-    constructor(message: string, public status?: number, public error_code?: string) {
+    constructor(
+      message: string,
+      public status?: number,
+      public error_code?: string
+    ) {
       super(message);
       this.name = 'ApiError';
     }
@@ -130,7 +134,11 @@ describe('AuthApi', () => {
     });
 
     it('should handle network errors during registration', async () => {
-      const apiError = new ApiError('Service unavailable', 503, 'SERVICE_UNAVAILABLE');
+      const apiError = new ApiError(
+        'Service unavailable',
+        503,
+        'SERVICE_UNAVAILABLE'
+      );
       vi.mocked(apiClient.post).mockRejectedValue(apiError);
 
       const result = await authApi.register('newuser', 'password123');

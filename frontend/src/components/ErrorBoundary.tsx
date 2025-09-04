@@ -9,7 +9,7 @@ export interface ErrorBoundaryProps {
 
 export const ErrorBoundary: Component<ErrorBoundaryProps> = (props) => {
   const [error, setError] = createSignal<Error | null>(null);
-  
+
   // Reset error state
   const resetError = () => {
     setError(null);
@@ -31,7 +31,10 @@ export const ErrorBoundary: Component<ErrorBoundaryProps> = (props) => {
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+      const error =
+        event.reason instanceof Error
+          ? event.reason
+          : new Error(String(event.reason));
       setError(error);
       if (props.onError) {
         props.onError(error, { type: 'unhandledrejection' });
@@ -43,7 +46,10 @@ export const ErrorBoundary: Component<ErrorBoundaryProps> = (props) => {
 
     return () => {
       window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener(
+        'unhandledrejection',
+        handleUnhandledRejection
+      );
     };
   });
 
@@ -52,33 +58,44 @@ export const ErrorBoundary: Component<ErrorBoundaryProps> = (props) => {
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
       <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
         <div class="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <svg
+            class="w-8 h-8 text-red-600 dark:text-red-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
         </div>
-        
+
         <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-50 mb-2">
           Something went wrong
         </h1>
-        
+
         <p class="text-gray-600 dark:text-gray-400 mb-6">
-          We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
+          We encountered an unexpected error. Please try refreshing the page or
+          contact support if the problem persists.
         </p>
-        
+
         <div class="space-y-3">
           <Button variant="primary" onClick={reset} class="w-full">
             Try Again
           </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.reload()} 
+
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
             class="w-full"
           >
             Refresh Page
           </Button>
         </div>
-        
+
         <details class="mt-4 text-left">
           <summary class="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
             Error Details
@@ -101,11 +118,11 @@ export const ErrorBoundary: Component<ErrorBoundaryProps> = (props) => {
 
   return (
     <>
-      {error() ? (
-        props.fallback ? props.fallback(error()!, resetError) : defaultFallback(error()!, resetError)
-      ) : (
-        props.children
-      )}
+      {error()
+        ? props.fallback
+          ? props.fallback(error()!, resetError)
+          : defaultFallback(error()!, resetError)
+        : props.children}
     </>
   );
 };
@@ -119,7 +136,9 @@ export interface SectionErrorBoundaryProps {
   onError?: (error: Error) => void;
 }
 
-export const SectionErrorBoundary: Component<SectionErrorBoundaryProps> = (props) => {
+export const SectionErrorBoundary: Component<SectionErrorBoundaryProps> = (
+  props
+) => {
   const [error, setError] = createSignal<Error | null>(null);
 
   const resetError = () => {
@@ -149,19 +168,30 @@ export const SectionErrorBoundary: Component<SectionErrorBoundaryProps> = (props
       {error() ? (
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center">
           <div class="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              class="w-6 h-6 text-red-600 dark:text-red-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
           </div>
-          
+
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-50 mb-2">
             {props.title || 'Section Error'}
           </h3>
-          
+
           <p class="text-gray-600 dark:text-gray-400 mb-4">
-            {props.description || 'This section encountered an error and could not be displayed.'}
+            {props.description ||
+              'This section encountered an error and could not be displayed.'}
           </p>
-          
+
           <Button variant="secondary" size="sm" onClick={resetError}>
             Try Again
           </Button>

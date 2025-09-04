@@ -28,7 +28,7 @@ vi.mock('../../services/authApi', () => ({
   authApi: {
     getCurrentUser: vi.fn().mockResolvedValue({
       success: true,
-      data: { id: 1, username: 'testuser' }
+      data: { id: 1, username: 'testuser' },
     }),
     login: vi.fn(),
     register: vi.fn(),
@@ -39,18 +39,28 @@ vi.mock('../../services/authApi', () => ({
 // Test component to access user context
 const TestComponent = () => {
   const user = useUser();
-  
+
   return (
     <div>
-      <div data-testid="dashboard-loading">{user.isLoadingDashboard() ? 'true' : 'false'}</div>
+      <div data-testid="dashboard-loading">
+        {user.isLoadingDashboard() ? 'true' : 'false'}
+      </div>
       <div data-testid="dashboard-error">{user.dashboardError() || 'null'}</div>
-      <div data-testid="watchers-loading">{user.isLoadingWatchers() ? 'true' : 'false'}</div>
+      <div data-testid="watchers-loading">
+        {user.isLoadingWatchers() ? 'true' : 'false'}
+      </div>
       <div data-testid="watchers-count">{user.watchers().length}</div>
-      <div data-testid="connections-loading">{user.isLoadingConnections() ? 'true' : 'false'}</div>
-      <div data-testid="connections-count">{user.serviceConnections().length}</div>
+      <div data-testid="connections-loading">
+        {user.isLoadingConnections() ? 'true' : 'false'}
+      </div>
+      <div data-testid="connections-count">
+        {user.serviceConnections().length}
+      </div>
       <button onClick={() => user.retryDashboard()}>Retry Dashboard</button>
       <button onClick={() => user.refreshAll()}>Refresh All</button>
-      <button onClick={() => user.startWatcher('test-watcher')}>Start Watcher</button>
+      <button onClick={() => user.startWatcher('test-watcher')}>
+        Start Watcher
+      </button>
     </div>
   );
 };
@@ -59,9 +69,7 @@ const renderWithProviders = (component: any) => {
   return render(() => (
     <Router>
       <AuthProvider>
-        <UserProvider>
-          {component}
-        </UserProvider>
+        <UserProvider>{component}</UserProvider>
       </AuthProvider>
     </Router>
   ));
@@ -75,11 +83,23 @@ describe('UserContext', () => {
   it('should initialize and load data for authenticated user', async () => {
     const mockDashboardData = {
       user: { id: 1, username: 'testuser' },
-      stats: { totalWatchers: 2, activeWatchers: 1, totalSyncs: 5, lastSyncTime: '2024-01-01T00:00:00Z' }
+      stats: {
+        totalWatchers: 2,
+        activeWatchers: 1,
+        totalSyncs: 5,
+        lastSyncTime: '2024-01-01T00:00:00Z',
+      },
     };
 
     const mockWatchers = [
-      { id: 1, name: 'Test Watcher 1', sourceService: 'youtube_music', targetService: 'spotify', status: 'idle', playlistName: 'Test Playlist' },
+      {
+        id: 1,
+        name: 'Test Watcher 1',
+        sourceService: 'youtube_music',
+        targetService: 'spotify',
+        status: 'idle',
+        playlistName: 'Test Playlist',
+      },
     ];
 
     const mockConnections = [
@@ -110,9 +130,13 @@ describe('UserContext', () => {
 
     // Wait for all data to load
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent(
+        'false'
+      );
       expect(screen.getByTestId('watchers-loading')).toHaveTextContent('false');
-      expect(screen.getByTestId('connections-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('connections-loading')).toHaveTextContent(
+        'false'
+      );
     });
 
     expect(screen.getByTestId('watchers-count')).toHaveTextContent('1');
@@ -127,14 +151,24 @@ describe('UserContext', () => {
     });
 
     // Mock other APIs to succeed
-    vi.mocked(watcherApi.getWatchers).mockResolvedValue({ success: true, data: [] });
-    vi.mocked(userApi.getServiceConnections).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(watcherApi.getWatchers).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+    vi.mocked(userApi.getServiceConnections).mockResolvedValue({
+      success: true,
+      data: [],
+    });
 
     renderWithProviders(<TestComponent />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-error')).toHaveTextContent('Failed to load dashboard');
-      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('dashboard-error')).toHaveTextContent(
+        'Failed to load dashboard'
+      );
+      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent(
+        'false'
+      );
     });
   });
 
@@ -149,18 +183,26 @@ describe('UserContext', () => {
         success: true,
         data: {
           user: { id: 1, username: 'testuser' },
-          stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 }
+          stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 },
         },
       });
 
-    vi.mocked(watcherApi.getWatchers).mockResolvedValue({ success: true, data: [] });
-    vi.mocked(userApi.getServiceConnections).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(watcherApi.getWatchers).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+    vi.mocked(userApi.getServiceConnections).mockResolvedValue({
+      success: true,
+      data: [],
+    });
 
     renderWithProviders(<TestComponent />);
 
     // Wait for initial error
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-error')).toHaveTextContent('Network error');
+      expect(screen.getByTestId('dashboard-error')).toHaveTextContent(
+        'Network error'
+      );
     });
 
     // Click retry button
@@ -177,14 +219,21 @@ describe('UserContext', () => {
 
   it('should start watcher successfully', async () => {
     const mockWatchers = [
-      { id: 1, name: 'test-watcher', sourceService: 'youtube_music', targetService: 'spotify', status: 'idle', playlistName: 'Test' },
+      {
+        id: 1,
+        name: 'test-watcher',
+        sourceService: 'youtube_music',
+        targetService: 'spotify',
+        status: 'idle',
+        playlistName: 'Test',
+      },
     ];
 
     vi.mocked(userApi.getDashboard).mockResolvedValue({
       success: true,
       data: {
         user: { id: 1, username: 'testuser' },
-        stats: { totalWatchers: 1, activeWatchers: 0, totalSyncs: 0 }
+        stats: { totalWatchers: 1, activeWatchers: 0, totalSyncs: 0 },
       },
     });
 
@@ -193,7 +242,10 @@ describe('UserContext', () => {
       data: mockWatchers,
     });
 
-    vi.mocked(userApi.getServiceConnections).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(userApi.getServiceConnections).mockResolvedValue({
+      success: true,
+      data: [],
+    });
 
     vi.mocked(watcherApi.startWatcher).mockResolvedValue({
       success: true,
@@ -204,7 +256,9 @@ describe('UserContext', () => {
 
     // Wait for initial load
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent(
+        'false'
+      );
     });
 
     // Click start watcher button
@@ -222,12 +276,18 @@ describe('UserContext', () => {
       success: true,
       data: {
         user: { id: 1, username: 'testuser' },
-        stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 }
+        stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 },
       },
     });
 
-    vi.mocked(watcherApi.getWatchers).mockResolvedValue({ success: true, data: [] });
-    vi.mocked(userApi.getServiceConnections).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(watcherApi.getWatchers).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+    vi.mocked(userApi.getServiceConnections).mockResolvedValue({
+      success: true,
+      data: [],
+    });
 
     vi.mocked(watcherApi.startWatcher).mockResolvedValue({
       success: false,
@@ -238,7 +298,9 @@ describe('UserContext', () => {
 
     // Wait for initial load
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent(
+        'false'
+      );
     });
 
     // Click start watcher button
@@ -256,18 +318,26 @@ describe('UserContext', () => {
       success: true,
       data: {
         user: { id: 1, username: 'testuser' },
-        stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 }
+        stats: { totalWatchers: 0, activeWatchers: 0, totalSyncs: 0 },
       },
     });
 
-    vi.mocked(watcherApi.getWatchers).mockResolvedValue({ success: true, data: [] });
-    vi.mocked(userApi.getServiceConnections).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(watcherApi.getWatchers).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+    vi.mocked(userApi.getServiceConnections).mockResolvedValue({
+      success: true,
+      data: [],
+    });
 
     renderWithProviders(<TestComponent />);
 
     // Wait for initial load
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('dashboard-loading')).toHaveTextContent(
+        'false'
+      );
     });
 
     // Clear mock calls from initial load

@@ -66,7 +66,7 @@ export const UserProfile: Component<UserProfileProps> = (props) => {
                   </p>
                 </div>
               </div>
-              
+
               <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div class="text-center">
@@ -77,7 +77,7 @@ export const UserProfile: Component<UserProfileProps> = (props) => {
                       Total Watchers
                     </div>
                   </div>
-                  
+
                   <div class="text-center">
                     <div class="text-2xl font-bold text-green-600 dark:text-green-400">
                       {data().stats.activeWatchers}
@@ -86,7 +86,7 @@ export const UserProfile: Component<UserProfileProps> = (props) => {
                       Active
                     </div>
                   </div>
-                  
+
                   <div class="text-center">
                     <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {data().stats.totalSyncs}

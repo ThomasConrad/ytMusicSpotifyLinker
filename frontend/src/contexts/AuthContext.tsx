@@ -7,11 +7,7 @@ import {
   onMount,
 } from 'solid-js';
 import { authApi } from '@/services/authApi';
-import {
-  User,
-  LoginRequest,
-  RegisterRequest,
-} from '@/types';
+import { User, LoginRequest, RegisterRequest } from '@/types';
 
 // Authentication state and methods
 interface AuthContextType {
@@ -102,7 +98,7 @@ export const AuthProvider: ParentComponent = (props) => {
 
   // Register function
   const register = async (
-    userData: RegisterRequest,
+    userData: RegisterRequest
   ): Promise<RegisterResult> => {
     setIsLoading(true);
     try {
@@ -164,7 +160,7 @@ export const AuthProvider: ParentComponent = (props) => {
           setUser(null);
         }
       },
-      5 * 60 * 1000,
+      5 * 60 * 1000
     ); // 5 minutes
 
     // Cleanup on unmount or when user becomes unauthenticated

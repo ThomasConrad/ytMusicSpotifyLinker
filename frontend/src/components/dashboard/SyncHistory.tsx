@@ -13,9 +13,11 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
   const [syncHistory, setSyncHistory] = createSignal<SyncActivity[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-  
+
   // Filter and pagination state
-  const [selectedWatcher, setSelectedWatcher] = createSignal<number | null>(null);
+  const [selectedWatcher, setSelectedWatcher] = createSignal<number | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = createSignal(1);
   const [limit] = createSignal(10);
 
@@ -26,13 +28,13 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
   const loadSyncHistory = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const result = await userApi.getSyncHistory(
-        limit() * currentPage(), 
+        limit() * currentPage(),
         selectedWatcher() || undefined
       );
-      
+
       if (result.success) {
         setSyncHistory(result.data);
       } else {
@@ -60,7 +62,7 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
   };
 
   const handleLoadMore = () => {
-    setCurrentPage(prev => prev + 1);
+    setCurrentPage((prev) => prev + 1);
   };
 
   const getStatusColor = (status: 'success' | 'error' | 'partial') => {
@@ -80,20 +82,50 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
     switch (status) {
       case 'success':
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M5 13l4 4L19 7" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         );
       case 'error':
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         );
       case 'partial':
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
         );
     }
@@ -114,13 +146,13 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      
+
       if (diffHours < 1) return 'Less than an hour ago';
       if (diffHours < 24) return `${diffHours} hours ago`;
-      
+
       const diffDays = Math.floor(diffHours / 24);
       if (diffDays < 7) return `${diffDays} days ago`;
-      
+
       return date.toLocaleDateString();
     } catch {
       return 'Unknown time';
@@ -128,16 +160,24 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
   };
 
   return (
-    <section class={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 ${props.class || ''}`} aria-label="Sync History">
+    <section
+      class={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 ${props.class || ''}`}
+      aria-label="Sync History"
+    >
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-50" id="sync-history-heading">
+        <h2
+          class="text-xl font-semibold text-gray-900 dark:text-gray-50"
+          id="sync-history-heading"
+        >
           Sync History
         </h2>
-        
+
         <div class="flex space-x-2 items-center">
           {/* Watcher filter dropdown */}
           <Show when={watchers().length > 0}>
-            <label class="sr-only" for="watcher-filter">Filter by watcher</label>
+            <label class="sr-only" for="watcher-filter">
+              Filter by watcher
+            </label>
             <select
               id="watcher-filter"
               class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -156,7 +196,7 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
               </For>
             </select>
           </Show>
-          
+
           <Show when={!isLoading() && !error()}>
             <Button variant="secondary" size="sm" onClick={handleRetry}>
               Refresh
@@ -177,9 +217,7 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
             }
           >
             <div class="text-center py-8">
-              <div class="text-red-600 dark:text-red-400 mb-4">
-                {error()}
-              </div>
+              <div class="text-red-600 dark:text-red-400 mb-4">{error()}</div>
               <Button variant="secondary" size="sm" onClick={handleRetry}>
                 Retry
               </Button>
@@ -192,15 +230,26 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
           fallback={
             <div class="text-center py-12">
               <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  class="w-8 h-8 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50 mb-2">
                 No sync history
               </h3>
               <p class="text-gray-500 dark:text-gray-400">
-                Sync activities will appear here once you start running watchers.
+                Sync activities will appear here once you start running
+                watchers.
               </p>
             </div>
           }
@@ -215,31 +264,53 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
                         <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
                           {activity.watcherName}
                         </h3>
-                        
-                        <div class={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
+
+                        <div
+                          class={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}
+                        >
                           {getStatusIcon(activity.status)}
                           <span class="capitalize">{activity.status}</span>
                         </div>
                       </div>
-                      
+
                       <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                         <span title={formatTimestamp(activity.timestamp)}>
                           {getRelativeTime(activity.timestamp)}
                         </span>
-                        
+
                         <Show when={activity.status !== 'error'}>
                           <div class="flex items-center space-x-3">
                             <span class="flex items-center space-x-1">
-                              <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              <svg
+                                class="w-4 h-4 text-green-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width={2}
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                />
                               </svg>
                               <span>{activity.songsAdded} added</span>
                             </span>
-                            
+
                             <Show when={activity.songsSkipped > 0}>
                               <span class="flex items-center space-x-1">
-                                <svg class="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <svg
+                                  class="w-4 h-4 text-yellow-600"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width={2}
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
                                 </svg>
                                 <span>{activity.songsSkipped} skipped</span>
                               </span>
@@ -253,8 +324,18 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
                   <Show when={activity.error}>
                     <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
                       <div class="flex items-start space-x-2">
-                        <svg class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        <svg
+                          class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
                         </svg>
                         <div>
                           <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
@@ -274,9 +355,9 @@ export const SyncHistory: Component<SyncHistoryProps> = (props) => {
             {/* Load more button if there might be more data */}
             <Show when={syncHistory().length >= limit()}>
               <div class="text-center pt-4">
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={handleLoadMore}
                   loading={isLoading()}
                 >

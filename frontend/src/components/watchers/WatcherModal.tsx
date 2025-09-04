@@ -53,7 +53,9 @@ export const WatcherModal: Component<WatcherModalProps> = (props) => {
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
       const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+      const lastElement = focusableElements[
+        focusableElements.length - 1
+      ] as HTMLElement;
 
       const handleTabKey = (e: KeyboardEvent) => {
         if (e.key !== 'Tab') return;
@@ -94,18 +96,31 @@ export const WatcherModal: Component<WatcherModalProps> = (props) => {
         >
           {/* Header */}
           <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
-            <h2 id="modal-title" class="text-xl font-semibold text-gray-900 dark:text-gray-50">
+            <h2
+              id="modal-title"
+              class="text-xl font-semibold text-gray-900 dark:text-gray-50"
+            >
               {props.watcher() ? 'Edit Watcher' : 'Create New Watcher'}
             </h2>
-            
+
             <button
               onClick={props.onClose}
               disabled={props.isLoading()}
               class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50"
               aria-label="Close modal"
             >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>

@@ -12,7 +12,7 @@ export interface PerformanceEntry {
   LCP?: PerformanceMetric; // Largest Contentful Paint
   FID?: PerformanceMetric; // First Input Delay
   CLS?: PerformanceMetric; // Cumulative Layout Shift
-  
+
   // Other Web Vitals
   FCP?: PerformanceMetric; // First Contentful Paint
   TTFB?: PerformanceMetric; // Time to First Byte
@@ -24,16 +24,19 @@ const THRESHOLDS = {
   FID: { good: 100, poor: 300 },
   CLS: { good: 0.1, poor: 0.25 },
   FCP: { good: 1800, poor: 3000 },
-  TTFB: { good: 800, poor: 1800 }
+  TTFB: { good: 800, poor: 1800 },
 } as const;
 
 /**
  * Rate a metric value based on Core Web Vitals thresholds
  */
-function rateMetric(name: keyof typeof THRESHOLDS, value: number): 'good' | 'needs-improvement' | 'poor' {
+function rateMetric(
+  name: keyof typeof THRESHOLDS,
+  value: number
+): 'good' | 'needs-improvement' | 'poor' {
   const threshold = THRESHOLDS[name];
   if (!threshold) return 'good';
-  
+
   if (value <= threshold.good) return 'good';
   if (value <= threshold.poor) return 'needs-improvement';
   return 'poor';
@@ -42,12 +45,15 @@ function rateMetric(name: keyof typeof THRESHOLDS, value: number): 'good' | 'nee
 /**
  * Create a performance metric object
  */
-function createMetric(name: keyof typeof THRESHOLDS, value: number): PerformanceMetric {
+function createMetric(
+  name: keyof typeof THRESHOLDS,
+  value: number
+): PerformanceMetric {
   return {
     name,
     value,
     rating: rateMetric(name, value),
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 }
 
@@ -65,8 +71,10 @@ function getLCP(): Promise<PerformanceMetric | null> {
 
     const observer = new PerformanceObserver((entryList) => {
       const entries = entryList.getEntries();
-      const lastEntry = entries[entries.length - 1] as PerformanceEntry & { startTime: number };
-      
+      const lastEntry = entries[entries.length - 1] as PerformanceEntry & {
+        startTime: number;
+      };
+
       if (lastEntry) {
         lcp = createMetric('LCP', lastEntry.startTime);
       }
@@ -97,7 +105,7 @@ function getFID(): Promise<PerformanceMetric | null> {
     const observer = new PerformanceObserver((entryList) => {
       const entries = entryList.getEntries();
       const firstEntry = entries[0] as PerformanceEventTiming;
-      
+
       if (firstEntry) {
         const delay = firstEntry.processingStart - firstEntry.startTime;
         fid = createMetric('FID', delay);
@@ -143,9 +151,11 @@ function getCLS(): Promise<PerformanceMetric | null> {
           // If the entry occurred less than 1 second after the previous entry and
           // less than 5 seconds after the first entry in the session, include the
           // entry in the current session. Otherwise, start a new session.
-          if (sessionValue && 
-              entry.startTime - lastSessionEntry.startTime < 1000 &&
-              entry.startTime - firstSessionEntry.startTime < 5000) {
+          if (
+            sessionValue &&
+            entry.startTime - lastSessionEntry.startTime < 1000 &&
+            entry.startTime - firstSessionEntry.startTime < 5000
+          ) {
             sessionValue += (entry as any).value;
             sessionEntries.push(entry);
           } else {
@@ -185,8 +195,10 @@ function getFCP(): Promise<PerformanceMetric | null> {
 
     const observer = new PerformanceObserver((entryList) => {
       const entries = entryList.getEntries();
-      const fcpEntry = entries.find(entry => entry.name === 'first-contentful-paint');
-      
+      const fcpEntry = entries.find(
+        (entry) => entry.name === 'first-contentful-paint'
+      );
+
       if (fcpEntry) {
         const fcp = createMetric('FCP', fcpEntry.startTime);
         observer.disconnect();
@@ -212,8 +224,10 @@ function getTTFB(): PerformanceMetric | null {
     return null;
   }
 
-  const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-  
+  const navEntry = performance.getEntriesByType(
+    'navigation'
+  )[0] as PerformanceNavigationTiming;
+
   if (navEntry) {
     const ttfb = navEntry.responseStart - navEntry.requestStart;
     return createMetric('TTFB', ttfb);
@@ -237,7 +251,7 @@ export async function collectPerformanceMetrics(): Promise<PerformanceEntry> {
     getLCP(),
     getFID(),
     getCLS(),
-    getFCP()
+    getFCP(),
   ]);
 
   if (lcp) metrics.LCP = lcp;
@@ -258,9 +272,15 @@ export function reportPerformanceMetrics(metrics: PerformanceEntry): void {
     console.group('📊 Performance Metrics');
     Object.entries(metrics).forEach(([name, metric]) => {
       if (metric) {
-        const icon = metric.rating === 'good' ? '✅' : 
-                    metric.rating === 'needs-improvement' ? '⚠️' : '❌';
-        console.log(`${icon} ${name}: ${metric.value.toFixed(2)}ms (${metric.rating})`);
+        const icon =
+          metric.rating === 'good'
+            ? '✅'
+            : metric.rating === 'needs-improvement'
+              ? '⚠️'
+              : '❌';
+        console.log(
+          `${icon} ${name}: ${metric.value.toFixed(2)}ms (${metric.rating})`
+        );
       }
     });
     console.groupEnd();
@@ -278,7 +298,7 @@ function sendToAnalytics(event: string, data: any): void {
   // Example implementation for Google Analytics 4
   if (typeof gtag !== 'undefined') {
     gtag('event', event, {
-      custom_parameters: data
+      custom_parameters: data,
     });
   }
 
@@ -293,8 +313,8 @@ function sendToAnalytics(event: string, data: any): void {
         event,
         data,
         timestamp: Date.now(),
-        url: window.location.href
-      })
+        url: window.location.href,
+      }),
     }).catch(() => {
       // Silently fail analytics calls
     });
@@ -317,8 +337,8 @@ export function startPerformanceMonitoring(): void {
 
 async function collectAndReport(): Promise<void> {
   // Wait a bit for all metrics to be available
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
   try {
     const metrics = await collectPerformanceMetrics();
     reportPerformanceMetrics(metrics);
@@ -331,12 +351,18 @@ async function collectAndReport(): Promise<void> {
  * Measure custom performance timing
  */
 export function measureTiming<T>(name: string, fn: () => T): T;
-export function measureTiming<T>(name: string, fn: () => Promise<T>): Promise<T>;
-export function measureTiming<T>(name: string, fn: () => T | Promise<T>): T | Promise<T> {
+export function measureTiming<T>(
+  name: string,
+  fn: () => Promise<T>
+): Promise<T>;
+export function measureTiming<T>(
+  name: string,
+  fn: () => T | Promise<T>
+): T | Promise<T> {
   const startTime = performance.now();
-  
+
   const result = fn();
-  
+
   if (result instanceof Promise) {
     return result.finally(() => {
       const duration = performance.now() - startTime;
@@ -361,7 +387,11 @@ export function mark(name: string): void {
 /**
  * Measure between two marks
  */
-export function measure(name: string, startMark: string, endMark?: string): number | null {
+export function measure(
+  name: string,
+  startMark: string,
+  endMark?: string
+): number | null {
   if (typeof performance === 'undefined' || !performance.measure) {
     return null;
   }

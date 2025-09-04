@@ -108,25 +108,25 @@ export function createAccessibleField(options: {
   labelledBy?: string;
 }): AccessibleFieldProps {
   const id = options.id || generateId('field');
-  
+
   const props: AccessibleFieldProps = { id };
-  
+
   if (options.required) {
     props['aria-required'] = true;
   }
-  
+
   if (options.invalid) {
     props['aria-invalid'] = true;
   }
-  
+
   if (options.describedBy) {
     props['aria-describedby'] = options.describedBy;
   }
-  
+
   if (options.labelledBy) {
     props['aria-labelledby'] = options.labelledBy;
   }
-  
+
   return props;
 }
 
@@ -154,35 +154,35 @@ export function createAccessibleButton(options: {
   labelledBy?: string;
 }): AccessibleButtonProps {
   const props: AccessibleButtonProps = {};
-  
+
   if (options.pressed !== undefined) {
     props['aria-pressed'] = options.pressed;
   }
-  
+
   if (options.expanded !== undefined) {
     props['aria-expanded'] = options.expanded;
   }
-  
+
   if (options.hasPopup !== undefined) {
     props['aria-haspopup'] = options.hasPopup;
   }
-  
+
   if (options.controls) {
     props['aria-controls'] = options.controls;
   }
-  
+
   if (options.describedBy) {
     props['aria-describedby'] = options.describedBy;
   }
-  
+
   if (options.label) {
     props['aria-label'] = options.label;
   }
-  
+
   if (options.labelledBy) {
     props['aria-labelledby'] = options.labelledBy;
   }
-  
+
   return props;
 }
 
@@ -250,13 +250,13 @@ export function trapFocus(element: HTMLElement): () => void {
   const focusableElements = element.querySelectorAll<HTMLElement>(
     'a[href], button, textarea, input[type="text"], input[type="radio"], input[type="checkbox"], select'
   );
-  
+
   const firstFocusableElement = focusableElements[0];
   const lastFocusableElement = focusableElements[focusableElements.length - 1];
-  
+
   const handleTabKey = (event: KeyboardEvent) => {
     if (event.key !== KEYBOARD_KEYS.TAB) return;
-    
+
     if (event.shiftKey) {
       if (document.activeElement === firstFocusableElement) {
         event.preventDefault();
@@ -269,12 +269,12 @@ export function trapFocus(element: HTMLElement): () => void {
       }
     }
   };
-  
+
   element.addEventListener('keydown', handleTabKey);
-  
+
   // Focus the first element
   firstFocusableElement?.focus();
-  
+
   // Return cleanup function
   return () => {
     element.removeEventListener('keydown', handleTabKey);
@@ -293,9 +293,9 @@ export function announceToScreenReader(
   announcement.setAttribute('aria-atomic', 'true');
   announcement.className = 'sr-only';
   announcement.textContent = message;
-  
+
   document.body.appendChild(announcement);
-  
+
   // Remove after announcement
   setTimeout(() => {
     document.body.removeChild(announcement);
@@ -306,10 +306,13 @@ export function announceToScreenReader(
  * Checks if an element is visible and focusable
  */
 export function isElementFocusable(element: HTMLElement): boolean {
-  if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') {
+  if (
+    element.hasAttribute('disabled') ||
+    element.getAttribute('aria-hidden') === 'true'
+  ) {
     return false;
   }
-  
+
   const style = window.getComputedStyle(element);
   return (
     style.display !== 'none' &&
@@ -326,7 +329,7 @@ export function getAccessibleName(element: HTMLElement): string {
   // Check aria-label first
   const ariaLabel = element.getAttribute('aria-label');
   if (ariaLabel) return ariaLabel;
-  
+
   // Check aria-labelledby
   const labelledBy = element.getAttribute('aria-labelledby');
   if (labelledBy) {
@@ -335,15 +338,19 @@ export function getAccessibleName(element: HTMLElement): string {
       return labelElement.textContent || labelElement.innerText || '';
     }
   }
-  
+
   // Check associated label for form controls
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+  if (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  ) {
     const labels = element.labels;
     if (labels && labels.length > 0) {
       return labels[0].textContent || labels[0].innerText || '';
     }
   }
-  
+
   // Fall back to element text content
   return element.textContent || element.innerText || '';
 }
@@ -359,13 +366,13 @@ export function getContrastRatio(color1: string, color2: string): number {
     // This would need a proper implementation for production use
     return 0.5; // Placeholder
   };
-  
+
   const l1 = getLuminance(color1);
   const l2 = getLuminance(color2);
-  
+
   const lighter = Math.max(l1, l2);
   const darker = Math.min(l1, l2);
-  
+
   return (lighter + 0.05) / (darker + 0.05);
 }
 

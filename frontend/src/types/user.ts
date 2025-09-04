@@ -18,6 +18,10 @@ export interface ServiceConnection {
   username?: string;
   connectedAt?: string;
   lastRefresh?: string;
+  // Spotify-specific fields
+  display_name?: string;
+  premium?: boolean;
+  followers?: number;
 }
 
 export interface SyncActivity {

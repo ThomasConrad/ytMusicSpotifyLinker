@@ -23,7 +23,7 @@ export const LoadingSpinner: Component<LoadingSpinnerProps> = (props) => {
   const size = props.size || 'md';
   const color = props.color || 'primary';
   const label = props.label || 'Loading';
-  
+
   return (
     <div
       class={`animate-spin rounded-full border-2 border-transparent border-t-2 ${sizeClasses[size]} ${colorClasses[color]} ${props.class || ''}`}

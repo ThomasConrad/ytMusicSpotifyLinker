@@ -1,7 +1,8 @@
 import { Component, JSX, splitProps } from 'solid-js';
 import { createAccessibleButton } from '@/utils/accessibility';
 
-export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps
+  extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -17,30 +18,35 @@ export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>
 
 export const Button: Component<ButtonProps> = (props) => {
   const [local, buttonProps] = splitProps(props, [
-    'variant', 
-    'size', 
-    'loading', 
-    'children', 
+    'variant',
+    'size',
+    'loading',
+    'children',
     'class',
     'aria-label',
     'aria-describedby',
     'aria-pressed',
     'aria-expanded',
     'aria-haspopup',
-    'aria-controls'
+    'aria-controls',
   ]);
 
   const variant = local.variant || 'primary';
   const size = local.size || 'md';
 
   // Enhanced focus styles for better accessibility
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100';
+  const baseClasses =
+    'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100';
 
   const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 shadow-md hover:shadow-lg focus:ring-primary-500 focus:ring-opacity-50',
-    secondary: 'bg-primary-100 text-primary-800 hover:bg-primary-200 dark:bg-primary-800 dark:text-primary-50 dark:hover:bg-primary-700 shadow-sm hover:shadow focus:ring-primary-500 focus:ring-opacity-50',
-    outline: 'border border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/10 focus:ring-primary-500 focus:ring-opacity-50',
-    ghost: 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/10 focus:ring-primary-500 focus:ring-opacity-50',
+    primary:
+      'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 shadow-md hover:shadow-lg focus:ring-primary-500 focus:ring-opacity-50',
+    secondary:
+      'bg-primary-100 text-primary-800 hover:bg-primary-200 dark:bg-primary-800 dark:text-primary-50 dark:hover:bg-primary-700 shadow-sm hover:shadow focus:ring-primary-500 focus:ring-opacity-50',
+    outline:
+      'border border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/10 focus:ring-primary-500 focus:ring-opacity-50',
+    ghost:
+      'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/10 focus:ring-primary-500 focus:ring-opacity-50',
   };
 
   const sizeClasses = {
@@ -56,7 +62,11 @@ export const Button: Component<ButtonProps> = (props) => {
       class={classes}
       disabled={local.loading || buttonProps.disabled}
       aria-disabled={local.loading || buttonProps.disabled}
-      aria-label={local.loading ? `Loading... ${local['aria-label'] || ''}`.trim() : local['aria-label']}
+      aria-label={
+        local.loading
+          ? `Loading... ${local['aria-label'] || ''}`.trim()
+          : local['aria-label']
+      }
       aria-describedby={local['aria-describedby']}
       aria-pressed={local['aria-pressed']}
       aria-expanded={local['aria-expanded']}

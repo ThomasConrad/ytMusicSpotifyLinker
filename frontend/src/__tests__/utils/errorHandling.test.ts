@@ -72,12 +72,18 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should return user-friendly message for authentication errors', () => {
-      const message = getUserFriendlyMessage('token expired', ErrorType.AUTHENTICATION);
+      const message = getUserFriendlyMessage(
+        'token expired',
+        ErrorType.AUTHENTICATION
+      );
       expect(message).toContain('session has expired');
     });
 
     it('should return user-friendly message for validation errors', () => {
-      const message = getUserFriendlyMessage('invalid input', ErrorType.VALIDATION);
+      const message = getUserFriendlyMessage(
+        'invalid input',
+        ErrorType.VALIDATION
+      );
       expect(message).toContain('check your input');
     });
 
@@ -89,7 +95,9 @@ describe('ErrorHandling Utils', () => {
 
   describe('determineErrorType', () => {
     it('should determine type from HTTP status codes', () => {
-      expect(determineErrorType({ status: 401 })).toBe(ErrorType.AUTHENTICATION);
+      expect(determineErrorType({ status: 401 })).toBe(
+        ErrorType.AUTHENTICATION
+      );
       expect(determineErrorType({ status: 403 })).toBe(ErrorType.AUTHORIZATION);
       expect(determineErrorType({ status: 404 })).toBe(ErrorType.NOT_FOUND);
       expect(determineErrorType({ status: 400 })).toBe(ErrorType.CLIENT);
@@ -97,11 +105,21 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should determine type from error messages', () => {
-      expect(determineErrorType({ message: 'network connection failed' })).toBe(ErrorType.NETWORK);
-      expect(determineErrorType({ message: 'unauthorized access' })).toBe(ErrorType.AUTHENTICATION);
-      expect(determineErrorType({ message: 'permission denied' })).toBe(ErrorType.AUTHORIZATION);
-      expect(determineErrorType({ message: 'validation error' })).toBe(ErrorType.VALIDATION);
-      expect(determineErrorType({ message: 'not found' })).toBe(ErrorType.NOT_FOUND);
+      expect(determineErrorType({ message: 'network connection failed' })).toBe(
+        ErrorType.NETWORK
+      );
+      expect(determineErrorType({ message: 'unauthorized access' })).toBe(
+        ErrorType.AUTHENTICATION
+      );
+      expect(determineErrorType({ message: 'permission denied' })).toBe(
+        ErrorType.AUTHORIZATION
+      );
+      expect(determineErrorType({ message: 'validation error' })).toBe(
+        ErrorType.VALIDATION
+      );
+      expect(determineErrorType({ message: 'not found' })).toBe(
+        ErrorType.NOT_FOUND
+      );
     });
 
     it('should return UNKNOWN for unrecognizable errors', () => {
@@ -139,7 +157,8 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should retry on failure and eventually succeed', async () => {
-      const operation = vi.fn()
+      const operation = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Temporary failure'))
         .mockRejectedValueOnce(new Error('Another failure'))
         .mockResolvedValueOnce('success');
@@ -151,21 +170,30 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should fail after max attempts', async () => {
-      const operation = vi.fn().mockRejectedValue(new Error('Persistent failure'));
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error('Persistent failure'));
 
-      await expect(retryOperation(operation, 2, 10, false)).rejects.toThrow('Persistent failure');
+      await expect(retryOperation(operation, 2, 10, false)).rejects.toThrow(
+        'Persistent failure'
+      );
       expect(operation).toHaveBeenCalledTimes(2);
     });
 
     it('should not retry authentication errors', async () => {
-      const operation = vi.fn().mockRejectedValue({ message: 'unauthorized', status: 401 });
+      const operation = vi
+        .fn()
+        .mockRejectedValue({ message: 'unauthorized', status: 401 });
 
-      await expect(retryOperation(operation, 3)).rejects.toMatchObject({ status: 401 });
+      await expect(retryOperation(operation, 3)).rejects.toMatchObject({
+        status: 401,
+      });
       expect(operation).toHaveBeenCalledTimes(1);
     });
 
     it('should use exponential backoff', async () => {
-      const operation = vi.fn()
+      const operation = vi
+        .fn()
         .mockRejectedValueOnce(new Error('First failure'))
         .mockResolvedValueOnce('success');
 
@@ -192,7 +220,9 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should return error on failed operation', async () => {
-      const operation = vi.fn().mockRejectedValue(new Error('Operation failed'));
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error('Operation failed'));
 
       const result = await withErrorHandling(operation, 'test context');
 
@@ -202,10 +232,16 @@ describe('ErrorHandling Utils', () => {
     });
 
     it('should return fallback value on error', async () => {
-      const operation = vi.fn().mockRejectedValue(new Error('Operation failed'));
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error('Operation failed'));
       const fallback = 'fallback value';
 
-      const result = await withErrorHandling(operation, 'test context', fallback);
+      const result = await withErrorHandling(
+        operation,
+        'test context',
+        fallback
+      );
 
       expect(result.data).toBe(fallback);
       expect(result.error?.message).toBe('Operation failed');

@@ -45,21 +45,51 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
     switch (status) {
       case 'running':
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m2-7V8a3 3 0 00-3-3H9a3 3 0 00-3 3v1m2.172 10.172a4 4 0 010-5.656m0 5.656a4 4 0 010-5.656m4.828 0a4 4 0 010 5.656m0-5.656a4 4 0 010 5.656" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m2-7V8a3 3 0 00-3-3H9a3 3 0 00-3 3v1m2.172 10.172a4 4 0 010-5.656m0 5.656a4 4 0 010-5.656m4.828 0a4 4 0 010 5.656m0-5.656a4 4 0 010 5.656"
+            />
           </svg>
         );
       case 'error':
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
         );
       case 'idle':
       default:
         return (
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width={2}
+              d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         );
     }
@@ -69,14 +99,22 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
     switch (service) {
       case 'youtube_music':
         return (
-          <svg class="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+          <svg
+            class="w-5 h-5 text-red-600"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
           </svg>
         );
       case 'spotify':
         return (
-          <svg class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.746 3.808-.871 7.077-.496 9.712 1.115.295.18.387.563.207.857zm1.223-2.723c-.226.367-.706.482-1.073.256-2.687-1.652-6.785-2.131-9.965-1.166-.405.123-.834-.082-.957-.487-.123-.405.082-.834.487-.957 3.632-1.102 8.147-.568 11.252 1.327.367.226.482.706.256 1.073z"/>
+          <svg
+            class="w-5 h-5 text-green-600"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.746 3.808-.871 7.077-.496 9.712 1.115.295.18.387.563.207.857zm1.223-2.723c-.226.367-.706.482-1.073.256-2.687-1.652-6.785-2.131-9.965-1.166-.405.123-.834-.082-.957-.487-.123-.405.082-.834.487-.957 3.632-1.102 8.147-.568 11.252 1.327.367.226.482.706.256 1.073z" />
           </svg>
         );
       default:
@@ -91,13 +129,13 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      
+
       if (diffHours < 1) return 'Less than an hour ago';
       if (diffHours < 24) return `${diffHours} hours ago`;
-      
+
       const diffDays = Math.floor(diffHours / 24);
       if (diffDays < 7) return `${diffDays} days ago`;
-      
+
       return date.toLocaleDateString();
     } catch {
       return 'Unknown';
@@ -105,12 +143,18 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
   };
 
   return (
-    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6" aria-label="Watchers Management">
+    <section
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+      aria-label="Watchers Management"
+    >
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-50" id="watchers-heading">
+        <h2
+          class="text-xl font-semibold text-gray-900 dark:text-gray-50"
+          id="watchers-heading"
+        >
           Watchers
         </h2>
-        
+
         <div class="flex space-x-2">
           <Show when={!props.isLoading() && !props.error()}>
             <Button variant="secondary" size="sm" onClick={props.onRetry}>
@@ -150,16 +194,32 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
           fallback={
             <div class="text-center py-12">
               <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <svg
+                  class="w-8 h-8 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
                 </svg>
               </div>
               <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50 mb-2">
                 No watchers yet
               </h3>
               <p class="text-gray-500 dark:text-gray-400 mb-4">
-                Create your first watcher to start syncing playlists between your music services.
+                Create your first watcher to start syncing playlists between
+                your music services.
               </p>
               <Button variant="primary" onClick={props.onCreateWatcher}>
                 Create Your First Watcher
@@ -176,8 +236,10 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                     <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50 truncate pr-2">
                       {watcher.name}
                     </h3>
-                    
-                    <div class={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(watcher.status)}`}>
+
+                    <div
+                      class={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(watcher.status)}`}
+                    >
                       {getStatusIcon(watcher.status)}
                       <span class="capitalize">{watcher.status}</span>
                     </div>
@@ -191,11 +253,21 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                         {watcher.sourceService.replace('_', ' ')}
                       </span>
                     </div>
-                    
-                    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+
+                    <svg
+                      class="w-4 h-4 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width={2}
+                        d="M17 8l4 4m0 0l-4 4m4-4H3"
+                      />
                     </svg>
-                    
+
                     <div class="flex items-center space-x-1">
                       {getServiceIcon(watcher.targetService)}
                       <span class="text-sm text-gray-600 dark:text-gray-400 capitalize">
@@ -207,7 +279,8 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                   {/* Playlist info */}
                   <div class="mb-4">
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      Playlist: <span class="font-medium">{watcher.playlistName}</span>
+                      Playlist:{' '}
+                      <span class="font-medium">{watcher.playlistName}</span>
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-500">
                       Last sync: {formatLastSync(watcher.lastSyncTime)}
@@ -224,7 +297,7 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                           size="sm"
                           class="flex-1"
                           loading={actionLoading() === watcher.name}
-                          onClick={() => 
+                          onClick={() =>
                             handleWatcherAction(
                               () => props.onStartWatcher(watcher.name),
                               watcher.name
@@ -250,7 +323,7 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                         Stop
                       </Button>
                     </Show>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -258,15 +331,25 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                     >
                       Preview
                     </Button>
-                    
+
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => props.onEditWatcher(watcher)}
                       class="px-2"
                     >
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width={2}
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
                       </svg>
                     </Button>
                   </div>

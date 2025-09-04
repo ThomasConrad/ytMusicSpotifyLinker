@@ -5,7 +5,7 @@ import {
   DashboardData,
   ServiceConnection,
   SyncActivity,
-  UserResult
+  UserResult,
 } from '@/types';
 
 export class UserApiService {
@@ -16,7 +16,9 @@ export class UserApiService {
    */
   async getDashboard(): Promise<UserResult<DashboardData>> {
     try {
-      const response = await apiClient.get<DashboardData>(`${this.basePath}/dashboard`);
+      const response = await apiClient.get<DashboardData>(
+        `${this.basePath}/dashboard`
+      );
 
       if (response.success && response.data) {
         return {
@@ -37,7 +39,7 @@ export class UserApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to load dashboard data due to network error',
@@ -50,7 +52,9 @@ export class UserApiService {
    */
   async getServiceConnections(): Promise<UserResult<ServiceConnection[]>> {
     try {
-      const response = await apiClient.get<ServiceConnection[]>(`${this.basePath}/connections`);
+      const response = await apiClient.get<ServiceConnection[]>(
+        `${this.basePath}/connections`
+      );
 
       if (response.success && response.data) {
         return {
@@ -71,7 +75,7 @@ export class UserApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to load service connections due to network error',
@@ -82,11 +86,14 @@ export class UserApiService {
   /**
    * Disconnect from a service (YouTube Music or Spotify)
    */
-  async disconnectService(service: 'youtube_music' | 'spotify'): Promise<UserResult<void>> {
+  async disconnectService(
+    service: 'youtube_music' | 'spotify'
+  ): Promise<UserResult<void>> {
     try {
-      const response = await apiClient.post<{ success: boolean; message: string }>(
-        `${this.basePath}/connections/${service}/disconnect`
-      );
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+      }>(`${this.basePath}/connections/${service}/disconnect`);
 
       if (response.data?.success) {
         return {
@@ -96,7 +103,8 @@ export class UserApiService {
       } else {
         return {
           success: false,
-          error: response.data?.message || `Failed to disconnect from ${service}`,
+          error:
+            response.data?.message || `Failed to disconnect from ${service}`,
         };
       }
     } catch (error) {
@@ -107,7 +115,7 @@ export class UserApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: `Failed to disconnect from ${service} due to network error`,
@@ -118,15 +126,18 @@ export class UserApiService {
   /**
    * Get sync activity history
    */
-  async getSyncHistory(limit?: number, watcherId?: number): Promise<UserResult<SyncActivity[]>> {
+  async getSyncHistory(
+    limit?: number,
+    watcherId?: number
+  ): Promise<UserResult<SyncActivity[]>> {
     try {
       const params = new URLSearchParams();
       if (limit) params.append('limit', limit.toString());
       if (watcherId) params.append('watcher_id', watcherId.toString());
-      
+
       const queryString = params.toString();
       const endpoint = `${this.basePath}/sync-history${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await apiClient.get<SyncActivity[]>(endpoint);
 
       if (response.success && response.data) {
@@ -148,7 +159,7 @@ export class UserApiService {
           error_code: error.error_code,
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to load sync history due to network error',

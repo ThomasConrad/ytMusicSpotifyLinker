@@ -17,20 +17,22 @@ vi.mock('../../services/authApi', () => ({
 // Test component to access auth context
 const TestComponent = () => {
   const auth = useAuth();
-  
+
   return (
     <div>
       <div data-testid="is-loading">{auth.isLoading() ? 'true' : 'false'}</div>
-      <div data-testid="is-authenticated">{auth.isAuthenticated() ? 'true' : 'false'}</div>
+      <div data-testid="is-authenticated">
+        {auth.isAuthenticated() ? 'true' : 'false'}
+      </div>
       <div data-testid="user">{auth.user()?.username || 'null'}</div>
       <div data-testid="error">{auth.error() || 'null'}</div>
-      <div data-testid="has-checked">{auth.hasInitiallyChecked() ? 'true' : 'false'}</div>
+      <div data-testid="has-checked">
+        {auth.hasInitiallyChecked() ? 'true' : 'false'}
+      </div>
       <button onClick={() => auth.login('test@example.com', 'password')}>
         Login
       </button>
-      <button onClick={() => auth.logout()}>
-        Logout
-      </button>
+      <button onClick={() => auth.logout()}>Logout</button>
     </div>
   );
 };
@@ -38,9 +40,7 @@ const TestComponent = () => {
 const renderWithProviders = (component: any) => {
   return render(() => (
     <Router>
-      <AuthProvider>
-        {component}
-      </AuthProvider>
+      <AuthProvider>{component}</AuthProvider>
     </Router>
   ));
 };
@@ -110,7 +110,9 @@ describe('AuthContext', () => {
 
     // Wait for login attempt to complete
     await waitFor(() => {
-      expect(screen.getByTestId('error')).toHaveTextContent('Invalid credentials');
+      expect(screen.getByTestId('error')).toHaveTextContent(
+        'Invalid credentials'
+      );
       expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
     });
   });
@@ -152,13 +154,17 @@ describe('AuthContext', () => {
 
   it('should handle network errors during initial check', async () => {
     // Mock network error
-    vi.mocked(authApi.getCurrentUser).mockRejectedValue(new Error('Network error'));
+    vi.mocked(authApi.getCurrentUser).mockRejectedValue(
+      new Error('Network error')
+    );
 
     renderWithProviders(<TestComponent />);
 
     // Wait for error to be handled
     await waitFor(() => {
-      expect(screen.getByTestId('error')).toHaveTextContent('Failed to check authentication status');
+      expect(screen.getByTestId('error')).toHaveTextContent(
+        'Failed to check authentication status'
+      );
       expect(screen.getByTestId('is-loading')).toHaveTextContent('false');
       expect(screen.getByTestId('has-checked')).toHaveTextContent('true');
     });
@@ -185,7 +191,9 @@ describe('AuthContext', () => {
     loginButton.click();
 
     await waitFor(() => {
-      expect(screen.getByTestId('error')).toHaveTextContent('Invalid credentials');
+      expect(screen.getByTestId('error')).toHaveTextContent(
+        'Invalid credentials'
+      );
     });
 
     // Second login attempt - should succeed and clear error
