@@ -1,6 +1,7 @@
 import { Component, createSignal, Show } from 'solid-js';
 import { Button, Input } from '@/components/ui';
-import { WatcherSummary, CreateWatcherRequest, ServiceType } from '@/types';
+import { SpotifyPlaylistSelector } from '@/components/spotify';
+import { WatcherSummary, CreateWatcherRequest, ServiceType, SpotifyPlaylist } from '@/types';
 
 export interface WatcherFormProps {
   watcher?: WatcherSummary;
@@ -23,6 +24,8 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
   const [localErrors, setLocalErrors] = createSignal<Record<string, string>>(
     {}
   );
+  
+  const [showSpotifySelector, setShowSpotifySelector] = createSignal(false);
 
   const updateField = <K extends keyof CreateWatcherRequest>(
     field: K,
@@ -75,6 +78,15 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
 
   const getError = (field: string) => {
     return props.fieldErrors()[field] || localErrors()[field] || '';
+  };
+
+  const handleSpotifyPlaylistSelect = (playlist: SpotifyPlaylist) => {
+    updateField('sourcePlaylistId', playlist.id);
+    setShowSpotifySelector(false);
+  };
+
+  const canUseSpotifySelector = () => {
+    return formData().sourceService === 'spotify';
   };
 
   const serviceOptions: { value: ServiceType; label: string }[] = [
@@ -143,17 +155,51 @@ export const WatcherForm: Component<WatcherFormProps> = (props) => {
       </div>
 
       {/* Source Playlist */}
-      <Input
-        type="text"
-        label="Source Playlist ID"
-        value={formData().sourcePlaylistId}
-        onInput={(e) => updateField('sourcePlaylistId', e.currentTarget.value)}
-        error={getError('sourcePlaylistId')}
-        disabled={props.isLoading()}
-        placeholder="Enter the playlist ID from the source service"
-        helperText="You can find this in the playlist URL or share link"
-        required
-      />
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Source Playlist
+          </label>
+          <Show when={canUseSpotifySelector()}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSpotifySelector(!showSpotifySelector())}
+              disabled={props.isLoading()}
+            >
+              {showSpotifySelector() ? 'Manual Entry' : 'Browse Playlists'}
+            </Button>
+          </Show>
+        </div>
+
+        <Show 
+          when={showSpotifySelector() && canUseSpotifySelector()}
+          fallback={
+            <Input
+              type="text"
+              label="Playlist ID"
+              value={formData().sourcePlaylistId}
+              onInput={(e) => updateField('sourcePlaylistId', e.currentTarget.value)}
+              error={getError('sourcePlaylistId')}
+              disabled={props.isLoading()}
+              placeholder={canUseSpotifySelector() ? 'Enter Spotify playlist ID or browse above' : 'Enter the playlist ID from the source service'}
+              helperText={canUseSpotifySelector() 
+                ? 'You can find this in the Spotify playlist URL or use the Browse Playlists button'
+                : 'You can find this in the playlist URL or share link'
+              }
+              required
+            />
+          }
+        >
+          <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+            <SpotifyPlaylistSelector
+              onSelect={handleSpotifyPlaylistSelect}
+              selectedPlaylistId={formData().sourcePlaylistId}
+            />
+          </div>
+        </Show>
+      </div>
 
       {/* Target Configuration */}
       <div class="space-y-4">

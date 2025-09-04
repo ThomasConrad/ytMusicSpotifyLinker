@@ -1,6 +1,7 @@
 import { Component, Show, For, createSignal } from 'solid-js';
 import { LoadingSpinner, Button } from '@/components/ui';
-import { ServiceConnection } from '@/types';
+import { ServiceConnection, SpotifyConnectionStatus } from '@/types';
+import { useUser } from '@/contexts/UserContext';
 
 export interface ServiceConnectionsProps {
   serviceConnections: () => ServiceConnection[];
@@ -13,7 +14,32 @@ export interface ServiceConnectionsProps {
 export const ServiceConnections: Component<ServiceConnectionsProps> = (
   props
 ) => {
+  const userContext = useUser();
   const [disconnecting, setDisconnecting] = createSignal<string | null>(null);
+  const [connecting, setConnecting] = createSignal<string | null>(null);
+
+  const handleConnect = async (service: 'youtube_music' | 'spotify') => {
+    if (service !== 'spotify') {
+      alert(
+        `Connect to ${getServiceName(service)} - OAuth flow would start here`
+      );
+      return;
+    }
+
+    setConnecting(service);
+    try {
+      const result = await userContext.connectSpotify();
+      if (result.success && result.auth_url) {
+        window.location.href = result.auth_url;
+      } else {
+        alert(`Failed to connect to Spotify: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert(`Failed to connect to Spotify: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setConnecting(null);
+    }
+  };
 
   const handleDisconnect = async (service: 'youtube_music' | 'spotify') => {
     const confirmed = confirm(
@@ -23,7 +49,14 @@ export const ServiceConnections: Component<ServiceConnectionsProps> = (
 
     setDisconnecting(service);
     try {
-      await props.onDisconnect(service);
+      if (service === 'spotify') {
+        const result = await userContext.disconnectSpotify();
+        if (!result.success) {
+          alert(`Failed to disconnect from Spotify: ${result.error}`);
+        }
+      } else {
+        await props.onDisconnect(service);
+      }
     } finally {
       setDisconnecting(null);
     }
@@ -155,10 +188,40 @@ export const ServiceConnections: Component<ServiceConnectionsProps> = (
                         </span>
                       </div>
 
-                      <Show when={connection.connected && connection.username}>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Connected as: {connection.username}
-                        </p>
+                      <Show when={connection.connected}>
+                        {/* Show service-specific details */}
+                        <Show when={connection.service === 'spotify'}>
+                          {(() => {
+                            const spotifyStatus = userContext.spotifyConnectionStatus();
+                            return (
+                              <>
+                                <Show when={spotifyStatus.display_name || spotifyStatus.username}>
+                                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Connected as: {spotifyStatus.display_name || spotifyStatus.username}
+                                  </p>
+                                </Show>
+                                <Show when={spotifyStatus.premium !== undefined}>
+                                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    <span class={spotifyStatus.premium ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}>
+                                      {spotifyStatus.premium ? 'Premium' : 'Free'} account
+                                    </span>
+                                  </p>
+                                </Show>
+                                <Show when={spotifyStatus.followers !== undefined}>
+                                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    {spotifyStatus.followers} followers
+                                  </p>
+                                </Show>
+                              </>
+                            );
+                          })()}
+                        </Show>
+                        
+                        <Show when={connection.service === 'youtube_music' && connection.username}>
+                          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Connected as: {connection.username}
+                          </p>
+                        </Show>
                       </Show>
 
                       <Show when={connection.connectedAt}>
@@ -182,12 +245,8 @@ export const ServiceConnections: Component<ServiceConnectionsProps> = (
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => {
-                            // In a real implementation, this would trigger OAuth flow
-                            alert(
-                              `Connect to ${getServiceName(connection.service)} - OAuth flow would start here`
-                            );
-                          }}
+                          loading={connecting() === connection.service}
+                          onClick={() => handleConnect(connection.service)}
                         >
                           Connect
                         </Button>
@@ -208,58 +267,125 @@ export const ServiceConnections: Component<ServiceConnectionsProps> = (
             )}
           </For>
 
-          {/* Add placeholder services if none exist */}
-          <Show when={props.serviceConnections().length === 0}>
-            <div class="space-y-4">
-              {['youtube_music', 'spotify'].map((service) => (
+          {/* Always show Spotify connection if not already in the list */}
+          <Show when={!props.serviceConnections().some(conn => conn.service === 'spotify')}>
+            {(() => {
+              const spotifyStatus = userContext.spotifyConnectionStatus();
+              return (
                 <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
-                      <div
-                        class={`flex-shrink-0 text-gray-400 ${
-                          service === 'youtube_music'
-                            ? 'dark:text-gray-500'
-                            : 'dark:text-gray-500'
-                        }`}
-                      >
-                        {getServiceIcon(service)}
+                      <div class="flex-shrink-0 text-green-600 dark:text-green-400">
+                        {getServiceIcon('spotify')}
                       </div>
 
                       <div class="flex-1">
                         <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
-                          {getServiceName(service)}
+                          Spotify
                         </h3>
 
                         <div class="flex items-center space-x-2 mt-1">
-                          <div class="w-2 h-2 rounded-full bg-red-500" />
-                          <span class="text-sm font-medium text-red-600 dark:text-red-400">
-                            Not Connected
+                          <div class={`w-2 h-2 rounded-full ${spotifyStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <span class={`text-sm font-medium ${
+                            spotifyStatus.connected
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {spotifyStatus.connected ? 'Connected' : 'Not Connected'}
                           </span>
                         </div>
 
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Connect your {getServiceName(service)} account to
-                          start syncing playlists
-                        </p>
+                        <Show when={spotifyStatus.connected}>
+                          <Show when={spotifyStatus.display_name || spotifyStatus.username}>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Connected as: {spotifyStatus.display_name || spotifyStatus.username}
+                            </p>
+                          </Show>
+                          <Show when={spotifyStatus.premium !== undefined}>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                              <span class={spotifyStatus.premium ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}>
+                                {spotifyStatus.premium ? 'Premium' : 'Free'} account
+                              </span>
+                            </p>
+                          </Show>
+                        </Show>
+
+                        <Show when={!spotifyStatus.connected}>
+                          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Connect your Spotify account to start syncing playlists
+                          </p>
+                        </Show>
                       </div>
                     </div>
 
                     <div class="flex-shrink-0">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => {
-                          alert(
-                            `Connect to ${getServiceName(service)} - OAuth flow would start here`
-                          );
-                        }}
+                      <Show
+                        when={spotifyStatus.connected}
+                        fallback={
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            loading={connecting() === 'spotify'}
+                            onClick={() => handleConnect('spotify')}
+                          >
+                            Connect
+                          </Button>
+                        }
                       >
-                        Connect
-                      </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={disconnecting() === 'spotify'}
+                          onClick={() => handleDisconnect('spotify')}
+                        >
+                          Disconnect
+                        </Button>
+                      </Show>
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })()}
+          </Show>
+
+          {/* Add placeholder for YouTube Music if no connections exist */}
+          <Show when={props.serviceConnections().length === 0 && !props.serviceConnections().some(conn => conn.service === 'youtube_music')}>
+            <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                    {getServiceIcon('youtube_music')}
+                  </div>
+
+                  <div class="flex-1">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-50">
+                      YouTube Music
+                    </h3>
+
+                    <div class="flex items-center space-x-2 mt-1">
+                      <div class="w-2 h-2 rounded-full bg-red-500" />
+                      <span class="text-sm font-medium text-red-600 dark:text-red-400">
+                        Not Connected
+                      </span>
+                    </div>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Connect your YouTube Music account to start syncing playlists
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex-shrink-0">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={connecting() === 'youtube_music'}
+                    onClick={() => handleConnect('youtube_music')}
+                  >
+                    Connect
+                  </Button>
+                </div>
+              </div>
             </div>
           </Show>
         </div>

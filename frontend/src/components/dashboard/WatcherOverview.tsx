@@ -100,7 +100,7 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
       case 'youtube_music':
         return (
           <svg
-            class="w-5 h-5 text-red-600"
+            class="w-5 h-5 text-red-600 dark:text-red-400"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -110,11 +110,11 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
       case 'spotify':
         return (
           <svg
-            class="w-5 h-5 text-green-600"
+            class="w-5 h-5 text-green-600 dark:text-green-400"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.746 3.808-.871 7.077-.496 9.712 1.115.295.18.387.563.207.857zm1.223-2.723c-.226.367-.706.482-1.073.256-2.687-1.652-6.785-2.131-9.965-1.166-.405.123-.834-.082-.957-.487-.123-.405.082-.834.487-.957 3.632-1.102 8.147-.568 11.252 1.327.367.226.482.706.256 1.073z" />
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.746 3.808-.871 7.077-.496 9.712 1.115.295.18.387.563.207.857zm1.223-2.723c-.226.367-.706.482-1.073.256-2.687-1.652-6.785-2.131-9.965-1.166-.405.123-.834-.082-.957-.487-.123-.405.082-.834.487-.957 3.632-1.102 8.147-.568 11.252 1.327.367.226.482.706.256 1.073zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.485.148-.997-.126-1.145-.611-.148-.485.126-.997.611-1.145 3.532-1.073 9.404-.866 13.115 1.338.445.264.591.837.327 1.282-.264.445-.837.591-1.282.327z" />
           </svg>
         );
       default:
@@ -250,7 +250,7 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                     <div class="flex items-center space-x-1">
                       {getServiceIcon(watcher.sourceService)}
                       <span class="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                        {watcher.sourceService.replace('_', ' ')}
+                        {watcher.sourceService === 'youtube_music' ? 'YouTube Music' : 'Spotify'}
                       </span>
                     </div>
 
@@ -271,7 +271,7 @@ export const WatcherOverview: Component<WatcherOverviewProps> = (props) => {
                     <div class="flex items-center space-x-1">
                       {getServiceIcon(watcher.targetService)}
                       <span class="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                        {watcher.targetService.replace('_', ' ')}
+                        {watcher.targetService === 'youtube_music' ? 'YouTube Music' : 'Spotify'}
                       </span>
                     </div>
                   </div>
