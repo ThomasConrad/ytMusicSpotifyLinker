@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::{get, post},
@@ -10,7 +10,7 @@ use sqlx::SqlitePool;
 
 use rspotify::prelude::Id;
 use crate::{
-    app::spotify::{SpotifyAuthService, SpotifyClient},
+    app::spotify::{SpotifyAuthService, SpotifyClient, SpotifyPlaylistService},
     users::AuthSession,
 };
 
@@ -58,6 +58,61 @@ pub struct ApiSuccessResponse {
     pub message: String,
 }
 
+/// DTOs for playlist management
+#[derive(Debug, Serialize)]
+pub struct PlaylistResponse {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub track_count: u32,
+    pub is_public: bool,
+    pub owner_id: String,
+    pub owner_display_name: Option<String>,
+    pub image_url: Option<String>,
+    pub external_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PlaylistsResponse {
+    pub success: bool,
+    pub playlists: Vec<PlaylistResponse>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrackResponse {
+    pub id: Option<String>,
+    pub name: String,
+    pub artists: Vec<String>,
+    pub album: Option<String>,
+    pub duration_ms: Option<i32>,
+    pub external_url: Option<String>,
+    pub is_playable: bool,
+    pub added_at: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PlaylistTracksResponse {
+    pub success: bool,
+    pub tracks: Vec<TrackResponse>,
+    pub total: usize,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreatePlaylistRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub public: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PlaylistDetailResponse {
+    pub success: bool,
+    pub playlist: Option<PlaylistResponse>,
+    pub error: Option<String>,
+}
+
 /// Spotify API routes
 pub fn router() -> Router<SqlitePool> {
     Router::new()
@@ -66,6 +121,10 @@ pub fn router() -> Router<SqlitePool> {
         .route("/api/spotify/auth/status", get(auth_status))
         .route("/api/spotify/auth/disconnect", post(auth_disconnect))
         .route("/api/spotify/test", get(test_connection))
+        .route("/api/spotify/playlists", get(get_user_playlists))
+        .route("/api/spotify/playlists/:playlist_id", get(get_playlist_details))
+        .route("/api/spotify/playlists/:playlist_id/tracks", get(get_playlist_tracks))
+        .route("/api/spotify/playlists", post(create_playlist))
 }
 
 /// Start Spotify OAuth flow
@@ -280,6 +339,217 @@ async fn test_connection(
     }
 }
 
+/// Get user's Spotify playlists
+async fn get_user_playlists(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
+
+    match playlist_service.get_user_playlists(user.id).await {
+        Ok(playlists) => {
+            let playlist_responses: Vec<PlaylistResponse> = playlists
+                .into_iter()
+                .map(|p| PlaylistResponse {
+                    id: p.id.id().to_string(),
+                    name: p.name,
+                    description: None, // SimplifiedPlaylist doesn't have description field
+                    track_count: p.tracks.total,
+                    is_public: p.public.unwrap_or(false),
+                    owner_id: p.owner.id.id().to_string(),
+                    owner_display_name: p.owner.display_name,
+                    image_url: p.images.first().map(|img| img.url.clone()),
+                    external_url: p.external_urls.get("spotify").cloned().unwrap_or_default(),
+                })
+                .collect();
+
+            Ok(Json(PlaylistsResponse {
+                success: true,
+                playlists: playlist_responses,
+                error: None,
+            }))
+        }
+        Err(e) => Ok(Json(PlaylistsResponse {
+            success: false,
+            playlists: vec![],
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+/// Get detailed playlist information
+async fn get_playlist_details(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Path(playlist_id): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
+
+    match playlist_service.get_playlist(user.id, &playlist_id).await {
+        Ok(playlist) => {
+            let playlist_response = PlaylistResponse {
+                id: playlist.id.id().to_string(),
+                name: playlist.name,
+                description: playlist.description,
+                track_count: playlist.tracks.total,
+                is_public: playlist.public.unwrap_or(false),
+                owner_id: playlist.owner.id.id().to_string(),
+                owner_display_name: playlist.owner.display_name,
+                image_url: playlist.images.first().map(|img| img.url.clone()),
+                external_url: playlist.external_urls.get("spotify").cloned().unwrap_or_default(),
+            };
+
+            Ok(Json(PlaylistDetailResponse {
+                success: true,
+                playlist: Some(playlist_response),
+                error: None,
+            }))
+        }
+        Err(e) => Ok(Json(PlaylistDetailResponse {
+            success: false,
+            playlist: None,
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+/// Get tracks from a specific playlist
+async fn get_playlist_tracks(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Path(playlist_id): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
+
+    match playlist_service.get_playlist_tracks(user.id, &playlist_id).await {
+        Ok(tracks) => {
+            let track_responses: Vec<TrackResponse> = tracks
+                .into_iter()
+                .filter_map(|item| {
+                    if let Some(track) = item.track {
+                        if let rspotify::model::PlayableItem::Track(full_track) = track {
+                            return Some(TrackResponse {
+                                id: full_track.id.map(|id| id.id().to_string()),
+                                name: full_track.name,
+                                artists: full_track.artists.iter().map(|a| a.name.clone()).collect(),
+                                album: Some(full_track.album.name),
+                                duration_ms: Some(full_track.duration.num_milliseconds() as i32),
+                                external_url: full_track.external_urls.get("spotify").cloned(),
+                                is_playable: full_track.is_playable.unwrap_or(true),
+                                added_at: item.added_at.map(|dt| dt.to_string()),
+                            });
+                        }
+                    }
+                    None
+                })
+                .collect();
+
+            let total = track_responses.len();
+
+            Ok(Json(PlaylistTracksResponse {
+                success: true,
+                tracks: track_responses,
+                total,
+                error: None,
+            }))
+        }
+        Err(e) => Ok(Json(PlaylistTracksResponse {
+            success: false,
+            tracks: vec![],
+            total: 0,
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+/// Create a new playlist
+async fn create_playlist(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Json(request): Json<CreatePlaylistRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // Validate request
+    if request.name.trim().is_empty() {
+        return Ok(Json(ApiErrorResponse {
+            success: false,
+            error: "Playlist name cannot be empty".to_string(),
+        }).into_response());
+    }
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
+
+    match playlist_service.create_playlist(
+        user.id,
+        &request.name,
+        request.description.as_deref(),
+        request.public.unwrap_or(false),
+    ).await {
+        Ok(playlist) => {
+            let playlist_response = PlaylistResponse {
+                id: playlist.id.id().to_string(),
+                name: playlist.name,
+                description: playlist.description,
+                track_count: playlist.tracks.total,
+                is_public: playlist.public.unwrap_or(false),
+                owner_id: playlist.owner.id.id().to_string(),
+                owner_display_name: playlist.owner.display_name,
+                image_url: playlist.images.first().map(|img| img.url.clone()),
+                external_url: playlist.external_urls.get("spotify").cloned().unwrap_or_default(),
+            };
+
+            Ok(Json(PlaylistDetailResponse {
+                success: true,
+                playlist: Some(playlist_response),
+                error: None,
+            }).into_response())
+        }
+        Err(e) => Ok(Json(ApiErrorResponse {
+            success: false,
+            error: format!("Failed to create playlist: {}", e),
+        }).into_response()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,5 +637,69 @@ mod tests {
         let json = serde_json::to_string(&profile).unwrap();
         assert!(json.contains("\"id\":\"spotify_user_123\""));
         assert!(json.contains("\"premium\":true"));
+    }
+
+    #[tokio::test]
+    async fn test_playlist_response_serialization() {
+        let playlist = PlaylistResponse {
+            id: "test_playlist_id".to_string(),
+            name: "My Test Playlist".to_string(),
+            description: Some("A test playlist".to_string()),
+            track_count: 10,
+            is_public: true,
+            owner_id: "test_user".to_string(),
+            owner_display_name: Some("Test User".to_string()),
+            image_url: Some("https://example.com/image.jpg".to_string()),
+            external_url: "https://open.spotify.com/playlist/test".to_string(),
+        };
+
+        let json = serde_json::to_string(&playlist).unwrap();
+        assert!(json.contains("\"id\":\"test_playlist_id\""));
+        assert!(json.contains("\"name\":\"My Test Playlist\""));
+        assert!(json.contains("\"track_count\":10"));
+        assert!(json.contains("\"is_public\":true"));
+    }
+
+    #[tokio::test]
+    async fn test_track_response_serialization() {
+        let track = TrackResponse {
+            id: Some("track_123".to_string()),
+            name: "Test Song".to_string(),
+            artists: vec!["Artist 1".to_string(), "Artist 2".to_string()],
+            album: Some("Test Album".to_string()),
+            duration_ms: Some(180000),
+            external_url: Some("https://open.spotify.com/track/test".to_string()),
+            is_playable: true,
+            added_at: Some("2024-01-01T00:00:00Z".to_string()),
+        };
+
+        let json = serde_json::to_string(&track).unwrap();
+        assert!(json.contains("\"id\":\"track_123\""));
+        assert!(json.contains("\"name\":\"Test Song\""));
+        assert!(json.contains("\"artists\":[\"Artist 1\",\"Artist 2\"]"));
+        assert!(json.contains("\"duration_ms\":180000"));
+    }
+
+    #[tokio::test]
+    async fn test_create_playlist_request_deserialization() {
+        let json = r#"{"name":"New Playlist","description":"A new playlist","public":true}"#;
+        let request: CreatePlaylistRequest = serde_json::from_str(json).unwrap();
+        
+        assert_eq!(request.name, "New Playlist");
+        assert_eq!(request.description, Some("A new playlist".to_string()));
+        assert_eq!(request.public, Some(true));
+    }
+
+    #[tokio::test]
+    async fn test_playlists_response_serialization() {
+        let response = PlaylistsResponse {
+            success: true,
+            playlists: vec![],
+            error: None,
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"success\":true"));
+        assert!(json.contains("\"playlists\":[]"));
     }
 }

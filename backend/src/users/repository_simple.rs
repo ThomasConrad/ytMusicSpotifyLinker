@@ -87,6 +87,39 @@ impl WatcherRepository {
         Ok(watchers)
     }
 
+    pub async fn get_watcher_by_id(&self, watcher_id: i64) -> Result<Option<Watcher>> {
+        let row = sqlx::query(
+            r#"
+            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, 
+                   is_active, sync_frequency, last_sync_at, created_at, updated_at
+            FROM watchers 
+            WHERE id = ?
+            "#
+        )
+        .bind(watcher_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(row) = row {
+            Ok(Some(Watcher {
+                id: row.get("id"),
+                user_id: row.get("user_id"),
+                name: row.get("name"),
+                source_service: row.get("source_service"),
+                source_playlist_id: row.get("source_playlist_id"),
+                target_service: row.get("target_service"),
+                target_playlist_id: row.get("target_playlist_id"),
+                is_active: row.get::<i64, _>("is_active") != 0,
+                sync_frequency: row.get("sync_frequency"),
+                last_sync_at: row.get("last_sync_at"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub async fn get_watcher_by_name(&self, user_id: i64, name: &str) -> Result<Option<Watcher>> {
         let row = sqlx::query(
             r#"
@@ -240,5 +273,40 @@ impl SyncRepository {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn get_sync_operations_by_watcher(&self, watcher_id: i64, limit: i32) -> Result<Vec<SyncOperation>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, watcher_id, operation_type, status, songs_added, songs_removed, songs_failed, 
+                   error_message, started_at, completed_at
+            FROM sync_operations 
+            WHERE watcher_id = ?
+            ORDER BY started_at DESC
+            LIMIT ?
+            "#
+        )
+        .bind(watcher_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut operations = Vec::new();
+        for row in rows {
+            operations.push(SyncOperation {
+                id: row.get("id"),
+                watcher_id: row.get("watcher_id"),
+                operation_type: row.get("operation_type"),
+                status: row.get("status"),
+                songs_added: row.get("songs_added"),
+                songs_removed: row.get("songs_removed"),
+                songs_failed: row.get("songs_failed"),
+                error_message: row.get("error_message"),
+                started_at: row.get("started_at"),
+                completed_at: row.get("completed_at"),
+            });
+        }
+
+        Ok(operations)
     }
 }
