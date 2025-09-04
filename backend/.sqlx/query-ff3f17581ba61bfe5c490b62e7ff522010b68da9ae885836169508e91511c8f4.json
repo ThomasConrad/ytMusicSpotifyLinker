@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, service, external_id, name, description, total_tracks, is_public, owner_id, created_at, updated_at\n            FROM playlists \n            WHERE service = 'spotify' AND external_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "service",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "external_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_tracks",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_public",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "owner_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ff3f17581ba61bfe5c490b62e7ff522010b68da9ae885836169508e91511c8f4"
+}

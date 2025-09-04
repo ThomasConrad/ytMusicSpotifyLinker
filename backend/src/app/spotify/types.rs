@@ -136,6 +136,9 @@ pub enum SpotifyError {
     #[error("Track not found: {0}")]
     TrackNotFound(String),
     
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+    
     #[error("Network error: {0}")]
     NetworkError(#[from] reqwest::Error),
     

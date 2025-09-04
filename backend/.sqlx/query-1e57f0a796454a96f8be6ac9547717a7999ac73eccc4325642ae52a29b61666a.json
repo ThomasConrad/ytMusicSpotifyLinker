@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO playlists \n            (service, external_id, name, description, total_tracks, is_public, owner_id, updated_at)\n            VALUES ('spotify', ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "1e57f0a796454a96f8be6ac9547717a7999ac73eccc4325642ae52a29b61666a"
+}

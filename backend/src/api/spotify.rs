@@ -10,7 +10,7 @@ use sqlx::SqlitePool;
 
 use rspotify::prelude::Id;
 use crate::{
-    app::spotify::{SpotifyAuthService, SpotifyClient, SpotifyPlaylistService},
+    app::spotify::{SpotifyAuthService, SpotifyClient, SpotifyPlaylistService, SpotifySyncService},
     users::AuthSession,
 };
 
@@ -113,6 +113,41 @@ pub struct PlaylistDetailResponse {
     pub error: Option<String>,
 }
 
+/// DTOs for sync operations
+#[derive(Debug, Deserialize)]
+pub struct SyncPreviewRequest {
+    pub source_playlist_id: String,
+    pub target_service: String,
+    pub target_playlist_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SyncExecuteRequest {
+    pub watcher_id: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SyncPreviewResponse {
+    pub success: bool,
+    pub preview: Option<crate::users::models::SyncPreviewResponse>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SyncOperationResponse {
+    pub success: bool,
+    pub operation: Option<crate::users::models::SyncOperationResponse>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SyncStatusResponse {
+    pub success: bool,
+    pub status: Option<String>,
+    pub operation: Option<crate::users::models::SyncOperationResponse>,
+    pub error: Option<String>,
+}
+
 /// Spotify API routes
 pub fn router() -> Router<SqlitePool> {
     Router::new()
@@ -122,9 +157,12 @@ pub fn router() -> Router<SqlitePool> {
         .route("/api/spotify/auth/disconnect", post(auth_disconnect))
         .route("/api/spotify/test", get(test_connection))
         .route("/api/spotify/playlists", get(get_user_playlists))
-        .route("/api/spotify/playlists/:playlist_id", get(get_playlist_details))
-        .route("/api/spotify/playlists/:playlist_id/tracks", get(get_playlist_tracks))
+        .route("/api/spotify/playlists/{playlist_id}", get(get_playlist_details))
+        .route("/api/spotify/playlists/{playlist_id}/tracks", get(get_playlist_tracks))
         .route("/api/spotify/playlists", post(create_playlist))
+        .route("/api/spotify/sync/preview", post(sync_preview))
+        .route("/api/spotify/sync/execute", post(sync_execute))
+        .route("/api/spotify/sync/{sync_id}/status", get(sync_status))
 }
 
 /// Start Spotify OAuth flow
@@ -550,6 +588,202 @@ async fn create_playlist(
     }
 }
 
+/// Preview sync operation to show what changes would be made
+async fn sync_preview(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Json(request): Json<SyncPreviewRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // Validate request
+    if request.source_playlist_id.trim().is_empty() {
+        return Ok(Json(SyncPreviewResponse {
+            success: false,
+            preview: None,
+            error: Some("Source playlist ID cannot be empty".to_string()),
+        }));
+    }
+
+    if request.target_service.trim().is_empty() {
+        return Ok(Json(SyncPreviewResponse {
+            success: false,
+            preview: None,
+            error: Some("Target service cannot be empty".to_string()),
+        }));
+    }
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let sync_service = SpotifySyncService::new(client_id, redirect_uri, pool);
+
+    match sync_service.preview_sync(
+        user.id,
+        &request.source_playlist_id,
+        &request.target_service,
+        request.target_playlist_id.as_deref(),
+    ).await {
+        Ok(preview) => Ok(Json(SyncPreviewResponse {
+            success: true,
+            preview: Some(preview),
+            error: None,
+        })),
+        Err(e) => Ok(Json(SyncPreviewResponse {
+            success: false,
+            preview: None,
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+/// Execute sync operation for a watcher
+async fn sync_execute(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Json(request): Json<SyncExecuteRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // Validate that the watcher belongs to the authenticated user
+    // This is a security check to prevent users from syncing other users' watchers
+    use crate::users::repository_simple::WatcherRepository;
+    let watcher_repo = WatcherRepository::new(pool.clone());
+    
+    match watcher_repo.get_watcher_by_id(request.watcher_id).await {
+        Ok(Some(watcher)) => {
+            if watcher.user_id != user.id {
+                return Ok(Json(SyncOperationResponse {
+                    success: false,
+                    operation: None,
+                    error: Some("Access denied: watcher belongs to another user".to_string()),
+                }));
+            }
+        }
+        Ok(None) => {
+            return Ok(Json(SyncOperationResponse {
+                success: false,
+                operation: None,
+                error: Some("Watcher not found".to_string()),
+            }));
+        }
+        Err(e) => {
+            return Ok(Json(SyncOperationResponse {
+                success: false,
+                operation: None,
+                error: Some(format!("Database error: {}", e)),
+            }));
+        }
+    }
+
+    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let sync_service = SpotifySyncService::new(client_id, redirect_uri, pool);
+
+    // Execute sync in the background
+    // Note: In a production environment, this would be better handled by a task queue
+    // For now, we'll execute it directly but could timeout for long operations
+    match sync_service.sync_playlist_to_target(request.watcher_id).await {
+        Ok(operation) => Ok(Json(SyncOperationResponse {
+            success: true,
+            operation: Some(operation),
+            error: None,
+        })),
+        Err(e) => Ok(Json(SyncOperationResponse {
+            success: false,
+            operation: None,
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+/// Get status of a sync operation
+async fn sync_status(
+    auth_session: AuthSession,
+    State(pool): State<SqlitePool>,
+    Path(sync_id): Path<i64>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    use crate::users::repository_simple::SyncRepository;
+    let sync_repo = SyncRepository::new(pool.clone());
+
+    // First, we need to get the sync operation by ID to check if it exists
+    // Since we don't have a direct method, we'll need to implement one or work around it
+    // For now, let's get operations and filter by ID (not ideal, but works for testing)
+    
+    // Note: In a production system, we should add a get_sync_operation_by_id method
+    // For now, we'll search across recent operations to find the one with matching ID
+    use crate::users::repository_simple::WatcherRepository;
+    let watcher_repo = WatcherRepository::new(pool);
+    
+    // Get all watchers for this user and search their operations
+    match watcher_repo.get_watchers_by_user(user.id).await {
+        Ok(watchers) => {
+            let mut found_operation = None;
+            
+            for watcher in watchers {
+                match sync_repo.get_sync_operations_by_watcher(watcher.id, 50).await {
+                    Ok(operations) => {
+                        if let Some(operation) = operations.into_iter().find(|op| op.id == sync_id) {
+                            found_operation = Some(operation);
+                            break;
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+            
+            if let Some(operation) = found_operation {
+                // Operation already found in user's watchers, so it's owned by the user
+                Ok(Json(SyncStatusResponse {
+                    success: true,
+                    status: Some(operation.status.clone()),
+                    operation: Some(crate::users::models::SyncOperationResponse {
+                        id: operation.id,
+                        operation_type: operation.operation_type,
+                        status: operation.status,
+                        songs_added: operation.songs_added,
+                        songs_removed: operation.songs_removed,
+                        songs_failed: operation.songs_failed,
+                        error_message: operation.error_message,
+                        started_at: operation.started_at,
+                        completed_at: operation.completed_at,
+                    }),
+                    error: None,
+                }))
+            } else {
+                Ok(Json(SyncStatusResponse {
+                    success: false,
+                    status: None,
+                    operation: None,
+                    error: Some("Sync operation not found or access denied".to_string()),
+                }))
+            }
+        }
+        Err(e) => Ok(Json(SyncStatusResponse {
+            success: false,
+            status: None,
+            operation: None,
+            error: Some(format!("Failed to get sync status: {}", e)),
+        })),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -701,5 +935,63 @@ mod tests {
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("\"success\":true"));
         assert!(json.contains("\"playlists\":[]"));
+    }
+
+    #[tokio::test]
+    async fn test_sync_preview_request_deserialization() {
+        let json = r#"{"source_playlist_id":"spotify123","target_service":"youtube_music","target_playlist_id":"yt456"}"#;
+        let request: SyncPreviewRequest = serde_json::from_str(json).unwrap();
+        
+        assert_eq!(request.source_playlist_id, "spotify123");
+        assert_eq!(request.target_service, "youtube_music");
+        assert_eq!(request.target_playlist_id, Some("yt456".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_sync_execute_request_deserialization() {
+        let json = r#"{"watcher_id":42}"#;
+        let request: SyncExecuteRequest = serde_json::from_str(json).unwrap();
+        
+        assert_eq!(request.watcher_id, 42);
+    }
+
+    #[tokio::test]
+    async fn test_sync_preview_response_serialization() {
+        let response = SyncPreviewResponse {
+            success: true,
+            preview: None,
+            error: None,
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"success\":true"));
+        assert!(json.contains("\"preview\":null"));
+    }
+
+    #[tokio::test]
+    async fn test_sync_operation_response_serialization() {
+        let response = SyncOperationResponse {
+            success: true,
+            operation: None,
+            error: None,
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"success\":true"));
+        assert!(json.contains("\"operation\":null"));
+    }
+
+    #[tokio::test]
+    async fn test_sync_status_response_serialization() {
+        let response = SyncStatusResponse {
+            success: true,
+            status: Some("completed".to_string()),
+            operation: None,
+            error: None,
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"success\":true"));
+        assert!(json.contains("\"status\":\"completed\""));
     }
 }
