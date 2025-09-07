@@ -181,12 +181,14 @@ async fn test_spotify_auth_callback_success() -> Result<()> {
     
     assert!(start_response.status().is_success());
 
-    // Get user ID from database to use as state (simplified for test)
-    let user_record = sqlx::query("SELECT id FROM users WHERE username = 'callback_user'")
-        .fetch_one(&pool)
-        .await?;
-    let user_id: i64 = user_record.get("id");
-    let state = format!("state_{}", user_id);
+    // Start the OAuth flow to get proper state
+    let start_response_body: serde_json::Value = start_response.json().await?;
+    let auth_url = start_response_body["auth_url"].as_str().unwrap();
+    
+    // Extract state from the auth URL
+    let url = url::Url::parse(auth_url).unwrap();
+    let query_pairs: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+    let state = query_pairs.get("state").unwrap().clone();
 
     // Test callback with valid code and state
     let response = client
@@ -305,15 +307,15 @@ async fn test_spotify_auth_status_authenticated() -> Result<()> {
     create_authenticated_user(&client, &base_url, "auth_status_user").await?;
 
     // Insert mock credentials into database
-    let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'auth_status_user'")
+    let user_record = sqlx::query("SELECT id FROM users WHERE username = 'auth_status_user'")
         .fetch_one(&pool)
         .await?;
     
-    sqlx::query!(
+    sqlx::query(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
-         VALUES (?, 'spotify', 'mock_token_456', 'mock_refresh_456', datetime('now', '+1 hour'), 'user-read-private')",
-        user_record.id
+         VALUES (?, 'spotify', 'mock_token_456', 'mock_refresh_456', datetime('now', '+1 hour'), 'user-read-private')"
     )
+    .bind(user_record.get::<i64, _>("id"))
     .execute(&pool)
     .await?;
 

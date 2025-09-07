@@ -151,18 +151,18 @@ pub struct SyncStatusResponse {
 /// Spotify API routes
 pub fn router() -> Router<SqlitePool> {
     Router::new()
-        .route("/api/spotify/auth/start", get(auth_start))
-        .route("/api/spotify/auth/callback", get(auth_callback))
-        .route("/api/spotify/auth/status", get(auth_status))
-        .route("/api/spotify/auth/disconnect", post(auth_disconnect))
-        .route("/api/spotify/test", get(test_connection))
-        .route("/api/spotify/playlists", get(get_user_playlists))
-        .route("/api/spotify/playlists/{playlist_id}", get(get_playlist_details))
-        .route("/api/spotify/playlists/{playlist_id}/tracks", get(get_playlist_tracks))
-        .route("/api/spotify/playlists", post(create_playlist))
-        .route("/api/spotify/sync/preview", post(sync_preview))
-        .route("/api/spotify/sync/execute", post(sync_execute))
-        .route("/api/spotify/sync/{sync_id}/status", get(sync_status))
+        .route("/auth/start", get(auth_start))
+        .route("/auth/callback", get(auth_callback))
+        .route("/auth/status", get(auth_status))
+        .route("/auth/disconnect", post(auth_disconnect))
+        .route("/test", get(test_connection))
+        .route("/playlists", get(get_user_playlists))
+        .route("/playlists/{playlist_id}", get(get_playlist_details))
+        .route("/playlists/{playlist_id}/tracks", get(get_playlist_tracks))
+        .route("/playlists", post(create_playlist))
+        .route("/sync/preview", post(sync_preview))
+        .route("/sync/execute", post(sync_execute))
+        .route("/sync/{sync_id}/status", get(sync_status))
 }
 
 /// Start Spotify OAuth flow

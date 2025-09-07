@@ -1,6 +1,5 @@
 use anyhow::Result;
 use axum_login::{
-    login_required,
     tower_sessions::{ExpiredDeletion, Expiry, SessionManagerLayer},
     AuthManagerLayerBuilder,
 };
@@ -16,10 +15,9 @@ use tower_sessions::{cookie::Key, session_store::Error as SessionStoreError};
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
-    api::{auth, protected, spotify, users},
+    api::api,
     app::{Watcher, WatcherError},
     users::database,
-    users::Backend,
 };
 
 #[derive(Error, Debug)]
@@ -52,12 +50,8 @@ impl Router {
     }
 
     pub fn get_axum_router(&self) -> axum::Router {
-        protected::router()
-            .with_state(self.db.clone())
-            .route_layer(login_required!(Backend, login_url = "/login"))
-            .merge(users::router().with_state(self.db.clone()).route_layer(login_required!(Backend, login_url = "/login")))
-            .merge(spotify::router().with_state(self.db.clone()).route_layer(login_required!(Backend, login_url = "/login")))
-            .merge(auth::router(self.db.clone()))
+        // Mount the consolidated API router
+        api::router(self.db.clone())
     }
 
     pub async fn serve(self) -> Result<(), RouterError> {

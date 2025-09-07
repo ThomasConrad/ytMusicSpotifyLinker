@@ -2,17 +2,15 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, delete},
+    routing::{delete, get},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use serde_json;
+use sqlx::{SqlitePool, Row};
 use time::OffsetDateTime;
 
-use crate::users::{
-    models::UserCredential,
-    AuthSession, WatcherRepository,
-};
+use crate::users::{models::UserCredential, AuthSession};
 
 // DTOs for user profile operations
 #[derive(Debug, Serialize)]
@@ -63,10 +61,10 @@ pub struct ApiSuccessResponse {
 
 pub fn router() -> Router<SqlitePool> {
     Router::new()
-        .route("/api/users/profile", get(get::profile).put(profile_put))
-        .route("/api/users/dashboard", get(get::dashboard))
-        .route("/api/users/connections", get(get::connections))
-        .route("/api/users/connections/{service}", delete(delete::connection))
+        .route("/profile", get(get::profile).put(profile_put))
+        .route("/dashboard", get(get::dashboard))
+        .route("/connections", get(get::connections))
+        .route("/connections/{service}", delete(delete::connection))
 }
 
 mod get {
@@ -79,9 +77,10 @@ mod get {
                     id: user.id,
                     username: user.username,
                     created_at: None, // TODO: Add created_at field to User model
-                }).into_response())
+                })
+                .into_response())
             }
-            None => Err(StatusCode::UNAUTHORIZED)
+            None => Err(StatusCode::UNAUTHORIZED),
         }
     }
 
@@ -93,27 +92,96 @@ mod get {
             Some(user) => user,
             None => return Err(StatusCode::UNAUTHORIZED),
         };
+        
+        // Get basic dashboard stats
+        let watcher_stats = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total_watchers,
+                COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_watchers,
+                COUNT(CASE WHEN last_sync_at IS NOT NULL THEN 1 END) as synced_watchers
+            FROM watchers 
+            WHERE user_id = ?
+            "#
+        )
+        .bind(user.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        // Get service connections
-        let service_connections = get_user_service_connections(&pool, user.id).await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let sync_stats = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total_sync_operations,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_syncs,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_syncs,
+                SUM(songs_added) as total_songs_added,
+                SUM(songs_removed) as total_songs_removed,
+                MAX(started_at) as last_sync_time
+            FROM sync_operations so
+            JOIN watchers w ON so.watcher_id = w.id
+            WHERE w.user_id = ?
+            "#
+        )
+        .bind(user.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        // Get watcher count
-        let watcher_repo = WatcherRepository::new(pool);
-        let watcher_count = match watcher_repo.get_watchers_by_user(user.id).await {
-            Ok(watchers) => watchers.len() as i32,
-            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-        };
+        // Get recent activity (last 10 operations)
+        let recent_activity = sqlx::query(
+            r#"
+            SELECT 
+                so.id, so.operation_type, so.status, so.songs_added, so.songs_removed,
+                so.started_at, so.completed_at, w.name as watcher_name
+            FROM sync_operations so
+            JOIN watchers w ON so.watcher_id = w.id
+            WHERE w.user_id = ?
+            ORDER BY so.started_at DESC
+            LIMIT 10
+            "#
+        )
+        .bind(user.id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        Ok(Json(UserDashboardResponse {
-            profile: UserProfileResponse {
-                id: user.id,
-                username: user.username,
-                created_at: None, // TODO: Add created_at field to User model
+        let activity: Vec<serde_json::Value> = recent_activity
+            .into_iter()
+            .map(|row| {
+                serde_json::json!({
+                    "id": row.get::<i64, _>("id"),
+                    "type": row.get::<String, _>("operation_type"),
+                    "status": row.get::<String, _>("status"),
+                    "watcher_name": row.get::<String, _>("watcher_name"),
+                    "songs_added": row.get::<i32, _>("songs_added"),
+                    "songs_removed": row.get::<i32, _>("songs_removed"),
+                    "started_at": row.get::<OffsetDateTime, _>("started_at"),
+                    "completed_at": row.get::<Option<OffsetDateTime>, _>("completed_at")
+                })
+            })
+            .collect();
+
+        let dashboard_data = serde_json::json!({
+            "user": {
+                "id": user.id,
+                "username": user.username
             },
-            service_connections,
-            watcher_count,
-        }).into_response())
+            "stats": {
+                "total_watchers": watcher_stats.get::<i64, _>("total_watchers"),
+                "active_watchers": watcher_stats.get::<Option<i64>, _>("active_watchers").unwrap_or(0),
+                "synced_watchers": watcher_stats.get::<Option<i64>, _>("synced_watchers").unwrap_or(0),
+                "total_sync_operations": sync_stats.get::<i64, _>("total_sync_operations"),
+                "successful_syncs": sync_stats.get::<Option<i64>, _>("successful_syncs").unwrap_or(0),
+                "failed_syncs": sync_stats.get::<Option<i64>, _>("failed_syncs").unwrap_or(0),
+                "total_songs_added": sync_stats.get::<Option<i64>, _>("total_songs_added").unwrap_or(0),
+                "total_songs_removed": sync_stats.get::<Option<i64>, _>("total_songs_removed").unwrap_or(0),
+                "last_sync_time": sync_stats.get::<Option<OffsetDateTime>, _>("last_sync_time")
+            },
+            "recent_activity": activity
+        });
+
+        Ok(Json(dashboard_data))
     }
 
     pub async fn connections(
@@ -125,12 +193,14 @@ mod get {
             None => return Err(StatusCode::UNAUTHORIZED),
         };
 
-        let service_connections = get_user_service_connections(&pool, user.id).await
+        let service_connections = get_user_service_connections(&pool, user.id)
+            .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(ServiceConnectionsResponse {
             connections: service_connections,
-        }).into_response())
+        })
+        .into_response())
     }
 }
 
@@ -139,53 +209,57 @@ async fn profile_put(
     State(pool): State<SqlitePool>,
     Json(request): Json<UpdateProfileRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-        let user = match auth_session.user {
-            Some(user) => user,
-            None => return Err(StatusCode::UNAUTHORIZED),
-        };
+    let user = match auth_session.user {
+        Some(user) => user,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
 
-        // For now, only username updates are supported
-        if let Some(new_username) = request.username {
-            // Validate username
-            if new_username.trim().is_empty() {
-                return Ok(Json(ApiErrorResponse {
-                    success: false,
-                    error: "Username cannot be empty".to_string(),
-                    error_code: Some("INVALID_USERNAME".to_string()),
-                }).into_response());
-            }
-
-            // Update username in database
-            match update_user_profile(&pool, user.id, &new_username).await {
-                Ok(_) => {
-                    Ok(Json(UserProfileResponse {
-                        id: user.id,
-                        username: new_username,
-                        created_at: None, // TODO: Add created_at field to User model
-                    }).into_response())
-                }
-                Err(e) => {
-                    let error_message = if e.to_string().contains("UNIQUE constraint failed") {
-                        "Username already exists".to_string()
-                    } else {
-                        "Failed to update profile".to_string()
-                    };
-
-                    Ok(Json(ApiErrorResponse {
-                        success: false,
-                        error: error_message,
-                        error_code: Some("UPDATE_FAILED".to_string()),
-                    }).into_response())
-                }
-            }
-        } else {
-            // No updates provided
-            Ok(Json(UserProfileResponse {
-                id: user.id,
-                username: user.username,
-                created_at: None,
-            }).into_response())
+    // For now, only username updates are supported
+    if let Some(new_username) = request.username {
+        // Validate username
+        if new_username.trim().is_empty() {
+            return Ok(Json(ApiErrorResponse {
+                success: false,
+                error: "Username cannot be empty".to_string(),
+                error_code: Some("INVALID_USERNAME".to_string()),
+            })
+            .into_response());
         }
+
+        // Update username in database
+        match update_user_profile(&pool, user.id, &new_username).await {
+            Ok(_) => {
+                Ok(Json(UserProfileResponse {
+                    id: user.id,
+                    username: new_username,
+                    created_at: None, // TODO: Add created_at field to User model
+                })
+                .into_response())
+            }
+            Err(e) => {
+                let error_message = if e.to_string().contains("UNIQUE constraint failed") {
+                    "Username already exists".to_string()
+                } else {
+                    "Failed to update profile".to_string()
+                };
+
+                Ok(Json(ApiErrorResponse {
+                    success: false,
+                    error: error_message,
+                    error_code: Some("UPDATE_FAILED".to_string()),
+                })
+                .into_response())
+            }
+        }
+    } else {
+        // No updates provided
+        Ok(Json(UserProfileResponse {
+            id: user.id,
+            username: user.username,
+            created_at: None,
+        })
+        .into_response())
+    }
 }
 
 mod delete {
@@ -207,24 +281,23 @@ mod delete {
                 success: false,
                 error: format!("Unsupported service: {}", service),
                 error_code: Some("INVALID_SERVICE".to_string()),
-            }).into_response());
+            })
+            .into_response());
         }
 
         // Delete user credentials for the service
         match delete_user_credentials(&pool, user.id, &service).await {
-            Ok(_) => {
-                Ok(Json(ApiSuccessResponse {
-                    success: true,
-                    message: format!("Successfully disconnected from {}", service),
-                }).into_response())
-            }
-            Err(_) => {
-                Ok(Json(ApiErrorResponse {
-                    success: false,
-                    error: "Failed to disconnect service".to_string(),
-                    error_code: Some("DISCONNECT_FAILED".to_string()),
-                }).into_response())
-            }
+            Ok(_) => Ok(Json(ApiSuccessResponse {
+                success: true,
+                message: format!("Successfully disconnected from {}", service),
+            })
+            .into_response()),
+            Err(_) => Ok(Json(ApiErrorResponse {
+                success: false,
+                error: "Failed to disconnect service".to_string(),
+                error_code: Some("DISCONNECT_FAILED".to_string()),
+            })
+            .into_response()),
         }
     }
 }
@@ -232,22 +305,22 @@ mod delete {
 // Helper functions for database operations
 
 async fn get_user_service_connections(
-    pool: &SqlitePool, 
-    user_id: i64
+    pool: &SqlitePool,
+    user_id: i64,
 ) -> Result<Vec<ServiceConnectionStatus>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, UserCredential>(
-        "SELECT * FROM user_credentials WHERE user_id = ?"
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
+    let rows =
+        sqlx::query_as::<_, UserCredential>("SELECT * FROM user_credentials WHERE user_id = ?")
+            .bind(user_id)
+            .fetch_all(pool)
+            .await?;
 
     let mut connections = Vec::new();
     let now = OffsetDateTime::now_utc();
 
     // Add connections for existing services
     for row in rows {
-        let requires_reauth = row.expires_at
+        let requires_reauth = row
+            .expires_at
             .map(|expires| expires <= now)
             .unwrap_or(false);
 
@@ -287,7 +360,7 @@ async fn update_user_profile(
         .bind(user_id)
         .execute(pool)
         .await?;
-    
+
     Ok(())
 }
 
@@ -301,7 +374,7 @@ async fn delete_user_credentials(
         .bind(service)
         .execute(pool)
         .await?;
-    
+
     Ok(())
 }
 
@@ -379,13 +452,16 @@ mod tests {
         .unwrap();
 
         let connections = get_user_service_connections(&pool, 1).await.unwrap();
-        
+
         assert_eq!(connections.len(), 2); // youtube_music (connected) + spotify (disconnected)
-        
-        let youtube_connection = connections.iter().find(|c| c.service == "youtube_music").unwrap();
+
+        let youtube_connection = connections
+            .iter()
+            .find(|c| c.service == "youtube_music")
+            .unwrap();
         assert!(youtube_connection.is_connected);
         assert!(!youtube_connection.requires_reauth);
-        
+
         let spotify_connection = connections.iter().find(|c| c.service == "spotify").unwrap();
         assert!(!spotify_connection.is_connected);
     }
@@ -408,7 +484,7 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
-        
+
         let username: String = row.get("username");
         assert_eq!(username, "newusername");
     }
