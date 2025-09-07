@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT service, access_token, expires_at, token_scope, created_at, updated_at \n             FROM user_credentials WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "service",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "access_token",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "expires_at",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "token_scope",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a9532c93b6a115388aea92af271ba85c3a8cd2f64a074dc409baec9279aaa612"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                COUNT(*) as total_watchers,\n                COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_watchers,\n                COUNT(CASE WHEN last_sync_at IS NOT NULL THEN 1 END) as synced_watchers\n            FROM watchers \n            WHERE user_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_watchers",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "active_watchers",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "synced_watchers",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a0f9f5a9385aeb412705ba3cfb8a7bdbcc9c00d046831918b6beff9f29f1be9b"
+}

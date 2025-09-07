@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use serde_json;
-use sqlx::{SqlitePool, Row};
+use sqlx::SqlitePool;
 use time::OffsetDateTime;
 
 use crate::users::AuthSession;
@@ -27,11 +27,11 @@ mod get {
         let user = auth_required(auth_session)?;
         
         // Query user credentials for service connections
-        let credentials = sqlx::query(
+        let credentials = sqlx::query!(
             "SELECT service, access_token, expires_at, token_scope, created_at, updated_at 
-             FROM user_credentials WHERE user_id = ?"
+             FROM user_credentials WHERE user_id = ?",
+            user.id
         )
-        .bind(user.id)
         .fetch_all(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -39,9 +39,9 @@ mod get {
         let mut connections = Vec::new();
         
         for cred in credentials {
-            let service: String = cred.get("service");
-            let expires_at: Option<OffsetDateTime> = cred.get("expires_at");
-            let created_at: OffsetDateTime = cred.get("created_at");
+            let service = &cred.service;
+            let expires_at = cred.expires_at;
+            let created_at = cred.created_at;
             
             // Check if token is expired
             let is_connected = if let Some(expires_at) = expires_at {
@@ -55,7 +55,8 @@ mod get {
                 "connected": is_connected,
                 "connected_at": created_at,
                 "expires_at": expires_at,
-                "scopes": cred.get::<Option<String>, _>("token_scope")
+                "scopes": cred.token_scope
+                    .as_ref()
                     .map(|s| s.split(',').map(|s| s.to_string()).collect::<Vec<String>>())
                     .unwrap_or_default()
             }));

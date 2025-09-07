@@ -110,16 +110,14 @@ impl Database {
 
 impl DatabaseOperations for Database {
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, Error> {
-        let user = sqlx::query_as("select * from users where username = ?")
-            .bind(username)
+        let user = sqlx::query_as!(User, "select * from users where username = ?", username)
             .fetch_optional(&self.pool)
             .await?;
         Ok(user)
     }
 
     async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, Error> {
-        let user = sqlx::query_as("select * from users where id = ?")
-            .bind(id)
+        let user = sqlx::query_as!(User, "select * from users where id = ?", id)
             .fetch_optional(&self.pool)
             .await?;
         Ok(user)
@@ -161,12 +159,11 @@ impl DatabaseOperations for Database {
         })
         .await??;
 
-        let user =
-            sqlx::query_as("INSERT INTO users (username, password) VALUES (?, ?) RETURNING *")
-                .bind(username)
-                .bind(password_hash)
-                .fetch_one(&self.pool)
-                .await?;
+        let user = sqlx::query_as!(User,
+            "INSERT INTO users (username, password) VALUES (?, ?) RETURNING *",
+            username, password_hash)
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(user)
     }
@@ -224,7 +221,7 @@ mod tests {
             .expect("Failed to create test database");
 
         // Create the users table
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,

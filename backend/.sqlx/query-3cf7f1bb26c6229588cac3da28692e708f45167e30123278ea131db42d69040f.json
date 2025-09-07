@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE user_credentials \n            SET access_token = ?, refresh_token = ?, expires_at = ?, updated_at = ?\n            WHERE user_id = ? AND service = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "3cf7f1bb26c6229588cac3da28692e708f45167e30123278ea131db42d69040f"
+}

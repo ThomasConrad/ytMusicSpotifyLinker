@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM user_credentials WHERE user_id = ? AND service = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4c15090dfaf2e17d8a6f0518c0f7e3c3e8fc76d7b915301b805adafda48c149c"
+}

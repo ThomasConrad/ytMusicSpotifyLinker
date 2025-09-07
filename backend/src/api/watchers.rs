@@ -7,10 +7,10 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json;
-use sqlx::{SqlitePool, Row};
+use sqlx::SqlitePool;
 use time::OffsetDateTime;
 
-use crate::users::{AuthSession, WatcherRepository, CreateWatcherRequest, WatcherResponse};
+use crate::users::{AuthSession, CreateWatcherRequest, WatcherRepository, WatcherResponse};
 
 // Enhanced DTOs for dashboard data
 #[derive(Debug, Serialize)]
@@ -90,25 +90,32 @@ pub fn router() -> Router<SqlitePool> {
         .route("/{watchername}/preview", get(get::preview_watcher))
         .route("/{watchername}/share", post(post::share_watcher))
         // Service-specific endpoints for watchers
-        .route("/{watchername}/ytmusic", get(get::get_ytmusic).post(post::post_ytmusic))
+        .route(
+            "/{watchername}/ytmusic",
+            get(get::get_ytmusic).post(post::post_ytmusic),
+        )
         .route("/{watchername}/ytmusic/songs", get(get::get_ytmusic_songs))
-        .route("/{watchername}/spotify", get(get::get_spotify).post(post::post_spotify))
+        .route(
+            "/{watchername}/spotify",
+            get(get::get_spotify).post(post::post_spotify),
+        )
         .route("/{watchername}/spotify/songs", get(get::get_spotify_songs))
 }
 
 mod get {
     use super::*;
-    
+
     pub async fn list_watchers(
         auth_session: AuthSession,
         State(pool): State<SqlitePool>,
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
         let repo = WatcherRepository::new(pool);
-        
+
         match repo.get_watchers_by_user(user.id).await {
             Ok(watchers) => {
-                let response: Vec<WatcherResponse> = watchers.into_iter()
+                let response: Vec<WatcherResponse> = watchers
+                    .into_iter()
                     .map(|w| WatcherResponse {
                         id: w.id,
                         name: w.name,
@@ -176,7 +183,7 @@ mod get {
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
         let repo = WatcherRepository::new(pool);
-        
+
         match repo.get_watcher_by_name(user.id, &watchername).await {
             Ok(Some(watcher)) => {
                 if let Err(_) = repo.update_watcher_status(watcher.id, true).await {
@@ -199,7 +206,7 @@ mod get {
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
         let repo = WatcherRepository::new(pool);
-        
+
         match repo.get_watcher_by_name(user.id, &watchername).await {
             Ok(Some(watcher)) => {
                 if let Err(_) = repo.update_watcher_status(watcher.id, false).await {
@@ -222,7 +229,7 @@ mod get {
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
         let repo = WatcherRepository::new(pool.clone());
-        
+
         match repo.get_watcher_by_name(user.id, &watchername).await {
             Ok(Some(_watcher)) => {
                 // TODO: Implement actual preview logic with playlist comparison
@@ -243,7 +250,7 @@ mod get {
         State(pool): State<SqlitePool>,
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
-        
+
         match get_enhanced_watchers(&pool, user.id).await {
             Ok(watchers) => Ok(Json(watchers)),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -256,7 +263,7 @@ mod get {
         Path(id): Path<i64>,
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
-        
+
         match get_watcher_status_detail(&pool, user.id, id).await {
             Ok(Some(detail)) => Ok(Json(detail)),
             Ok(None) => Err(StatusCode::NOT_FOUND),
@@ -270,7 +277,7 @@ mod get {
         Path(id): Path<i64>,
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
-        
+
         match get_watcher_sync_history(&pool, user.id, id, 1, 20).await {
             Ok(Some(history)) => Ok(Json(history)),
             Ok(None) => Err(StatusCode::NOT_FOUND),
@@ -289,7 +296,7 @@ mod post {
     ) -> Result<impl IntoResponse, StatusCode> {
         let user = auth_required(auth_session)?;
         let repo = WatcherRepository::new(pool);
-        
+
         match repo.create_watcher(user.id, request).await {
             Ok(watcher) => {
                 let response = WatcherResponse {
@@ -362,31 +369,42 @@ fn auth_required(auth_session: AuthSession) -> Result<crate::users::database::Us
 
 // Helper functions for enhanced dashboard data
 
-async fn get_enhanced_watchers(pool: &SqlitePool, user_id: i64) -> Result<Vec<WatcherSummary>, sqlx::Error> {
-    let rows = sqlx::query(
+async fn get_enhanced_watchers(
+    pool: &SqlitePool,
+    user_id: i64,
+) -> Result<Vec<WatcherSummary>, sqlx::Error> {
+    let rows = sqlx::query!(
         r#"
         SELECT 
-            w.id, w.name, w.source_service, w.source_playlist_id, w.target_service, w.target_playlist_id,
-            w.is_active, w.sync_frequency, w.last_sync_at, w.created_at, w.updated_at,
-            so.status as last_sync_status,
-            COUNT(so.id) as total_sync_operations,
-            COUNT(CASE WHEN so.status = 'completed' THEN 1 END) as successful_syncs,
-            SUM(so.songs_added + so.songs_removed) as total_songs
+            w.id               as "id!: i64",
+            w.name,
+            w.source_service,
+            w.source_playlist_id,
+            w.target_service,
+            w.target_playlist_id,
+            w.is_active        as "is_active!: i64",
+            w.sync_frequency   as "sync_frequency!: i64",
+            w.last_sync_at,
+            w.created_at,
+            so.status          as last_sync_status,
+            COUNT(so.id)                                           as "total_sync_operations!: i64",
+            COUNT(CASE WHEN so.status = 'completed' THEN 1 END)    as "successful_syncs!: i64",
+            COALESCE(SUM(so.songs_added + so.songs_removed), 0)    as "total_songs!: i64"
         FROM watchers w
         LEFT JOIN sync_operations so ON w.id = so.watcher_id
         WHERE w.user_id = ?
         GROUP BY w.id
         ORDER BY w.created_at DESC
-        "#
+        "#,
+        user_id
     )
-    .bind(user_id)
     .fetch_all(pool)
     .await?;
 
     let mut watchers = Vec::new();
     for row in rows {
-        let total_ops: i64 = row.get::<Option<i64>, _>("total_sync_operations").unwrap_or(0);
-        let successful_ops: i64 = row.get::<Option<i64>, _>("successful_syncs").unwrap_or(0);
+        let total_ops = row.total_sync_operations;
+        let successful_ops = row.successful_syncs;
         let sync_success_rate = if total_ops > 0 {
             Some(successful_ops as f32 / total_ops as f32 * 100.0)
         } else {
@@ -394,32 +412,40 @@ async fn get_enhanced_watchers(pool: &SqlitePool, user_id: i64) -> Result<Vec<Wa
         };
 
         watchers.push(WatcherSummary {
-            id: row.get("id"),
-            name: row.get("name"),
-            source_service: row.get("source_service"),
-            target_service: row.get("target_service"),
-            is_active: row.get::<i64, _>("is_active") != 0,
-            last_sync_at: row.get("last_sync_at"),
-            last_sync_status: row.get("last_sync_status"),
-            total_songs: row.get::<Option<i64>, _>("total_songs").map(|v| v as i32),
+            id: row.id,
+            name: row.name,
+            source_service: row.source_service,
+            target_service: row.target_service,
+            is_active: row.is_active != 0,
+            last_sync_at: row.last_sync_at,
+            last_sync_status: Some(row.last_sync_status),
+            total_songs: Some(row.total_songs as i32),
             sync_success_rate,
-            created_at: row.get("created_at"),
-            source_playlist_id: row.get("source_playlist_id"),
-            target_playlist_id: row.get("target_playlist_id"),
-            sync_frequency: row.get("sync_frequency"),
+            created_at: row
+                .created_at
+                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+            source_playlist_id: row.source_playlist_id,
+            target_playlist_id: row.target_playlist_id,
+            sync_frequency: row.sync_frequency as i32,
         });
     }
 
     Ok(watchers)
 }
 
-async fn get_watcher_status_detail(pool: &SqlitePool, user_id: i64, watcher_id: i64) -> Result<Option<WatcherStatusDetail>, sqlx::Error> {
+async fn get_watcher_status_detail(
+    pool: &SqlitePool,
+    user_id: i64,
+    watcher_id: i64,
+) -> Result<Option<WatcherStatusDetail>, sqlx::Error> {
     // First check if watcher belongs to user
-    let watcher_check = sqlx::query("SELECT id FROM watchers WHERE id = ? AND user_id = ?")
-        .bind(watcher_id)
-        .bind(user_id)
-        .fetch_optional(pool)
-        .await?;
+    let watcher_check = sqlx::query!(
+        "SELECT id FROM watchers WHERE id = ? AND user_id = ?",
+        watcher_id,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await?;
 
     if watcher_check.is_none() {
         return Ok(None);
@@ -427,8 +453,7 @@ async fn get_watcher_status_detail(pool: &SqlitePool, user_id: i64, watcher_id: 
 
     // Get enhanced watcher info
     let enhanced_watchers = get_enhanced_watchers(pool, user_id).await?;
-    let watcher_summary = enhanced_watchers.into_iter()
-        .find(|w| w.id == watcher_id);
+    let watcher_summary = enhanced_watchers.into_iter().find(|w| w.id == watcher_id);
 
     let Some(watcher_summary) = watcher_summary else {
         return Ok(None);
@@ -448,35 +473,39 @@ async fn get_watcher_status_detail(pool: &SqlitePool, user_id: i64, watcher_id: 
 }
 
 async fn get_watcher_sync_history(
-    pool: &SqlitePool, 
-    user_id: i64, 
-    watcher_id: i64, 
-    page: i32, 
-    per_page: i32
+    pool: &SqlitePool,
+    user_id: i64,
+    watcher_id: i64,
+    page: i32,
+    per_page: i32,
 ) -> Result<Option<SyncHistoryResponse>, sqlx::Error> {
     // First check if watcher belongs to user and get name
-    let watcher_info = sqlx::query("SELECT name FROM watchers WHERE id = ? AND user_id = ?")
-        .bind(watcher_id)
-        .bind(user_id)
-        .fetch_optional(pool)
-        .await?;
+    let watcher_info = sqlx::query!(
+        "SELECT name FROM watchers WHERE id = ? AND user_id = ?",
+        watcher_id,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await?;
 
     let Some(watcher_info) = watcher_info else {
         return Ok(None);
     };
 
     // Get total count for pagination
-    let total_count = sqlx::query("SELECT COUNT(*) as count FROM sync_operations WHERE watcher_id = ?")
-        .bind(watcher_id)
-        .fetch_one(pool)
-        .await?;
+    let total_count = sqlx::query!(
+        "SELECT COUNT(*) as count FROM sync_operations WHERE watcher_id = ?",
+        watcher_id
+    )
+    .fetch_one(pool)
+    .await?;
 
-    let total_count = total_count.get::<i64, _>("count") as i32;
+    let total_count = total_count.count as i32;
     let total_pages = (total_count + per_page - 1) / per_page;
 
     // Get paginated operations
     let offset = (page - 1) * per_page;
-    let operations = sqlx::query(
+    let operations = sqlx::query!(
         r#"
         SELECT id, operation_type, status, songs_added, songs_removed, songs_failed, 
                error_message, started_at, completed_at
@@ -484,31 +513,34 @@ async fn get_watcher_sync_history(
         WHERE watcher_id = ?
         ORDER BY started_at DESC
         LIMIT ? OFFSET ?
-        "#
+        "#,
+        watcher_id,
+        per_page,
+        offset
     )
-    .bind(watcher_id)
-    .bind(per_page)
-    .bind(offset)
     .fetch_all(pool)
     .await?;
 
-    let operations = operations.into_iter().map(|row| {
-        SyncOperationSummary {
-            id: row.get("id"),
-            operation_type: row.get("operation_type"),
-            status: row.get("status"),
-            songs_added: row.get("songs_added"),
-            songs_removed: row.get("songs_removed"),
-            songs_failed: row.get("songs_failed"),
-            error_message: row.get("error_message"),
-            started_at: row.get("started_at"),
-            completed_at: row.get("completed_at"),
-        }
-    }).collect();
+    let operations = operations
+        .into_iter()
+        .map(|row| SyncOperationSummary {
+            id: row.id.unwrap_or(0),
+            operation_type: row.operation_type,
+            status: row.status,
+            songs_added: row.songs_added.unwrap_or(0) as i32,
+            songs_removed: row.songs_removed.unwrap_or(0) as i32,
+            songs_failed: row.songs_failed.unwrap_or(0) as i32,
+            error_message: row.error_message,
+            started_at: row
+                .started_at
+                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+            completed_at: row.completed_at,
+        })
+        .collect();
 
     Ok(Some(SyncHistoryResponse {
         watcher_id,
-        watcher_name: watcher_info.get("name"),
+        watcher_name: watcher_info.name,
         operations,
         pagination: PaginationInfo {
             page,
@@ -519,8 +551,12 @@ async fn get_watcher_sync_history(
     }))
 }
 
-async fn get_recent_sync_operations(pool: &SqlitePool, watcher_id: i64, limit: i32) -> Result<Vec<SyncOperationSummary>, sqlx::Error> {
-    let operations = sqlx::query(
+async fn get_recent_sync_operations(
+    pool: &SqlitePool,
+    watcher_id: i64,
+    limit: i32,
+) -> Result<Vec<SyncOperationSummary>, sqlx::Error> {
+    let operations = sqlx::query!(
         r#"
         SELECT id, operation_type, status, songs_added, songs_removed, songs_failed, 
                error_message, started_at, completed_at
@@ -528,52 +564,58 @@ async fn get_recent_sync_operations(pool: &SqlitePool, watcher_id: i64, limit: i
         WHERE watcher_id = ?
         ORDER BY started_at DESC
         LIMIT ?
-        "#
+        "#,
+        watcher_id,
+        limit
     )
-    .bind(watcher_id)
-    .bind(limit)
     .fetch_all(pool)
     .await?;
 
-    Ok(operations.into_iter().map(|row| {
-        SyncOperationSummary {
-            id: row.get("id"),
-            operation_type: row.get("operation_type"),
-            status: row.get("status"),
-            songs_added: row.get("songs_added"),
-            songs_removed: row.get("songs_removed"),
-            songs_failed: row.get("songs_failed"),
-            error_message: row.get("error_message"),
-            started_at: row.get("started_at"),
-            completed_at: row.get("completed_at"),
-        }
-    }).collect())
+    Ok(operations
+        .into_iter()
+        .map(|row| SyncOperationSummary {
+            id: row.id.unwrap_or(0),
+            operation_type: row.operation_type,
+            status: row.status,
+            songs_added: row.songs_added.unwrap_or(0) as i32,
+            songs_removed: row.songs_removed.unwrap_or(0) as i32,
+            songs_failed: row.songs_failed.unwrap_or(0) as i32,
+            error_message: row.error_message,
+            started_at: row
+                .started_at
+                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+            completed_at: row.completed_at,
+        })
+        .collect())
 }
 
-async fn calculate_watcher_statistics(pool: &SqlitePool, watcher_id: i64) -> Result<WatcherStatistics, sqlx::Error> {
-    let stats = sqlx::query(
+async fn calculate_watcher_statistics(
+    pool: &SqlitePool,
+    watcher_id: i64,
+) -> Result<WatcherStatistics, sqlx::Error> {
+    let stats = sqlx::query!(
         r#"
         SELECT 
-            COUNT(*) as total_operations,
-            COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_syncs,
-            COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_syncs,
-            SUM(songs_added + songs_removed) as total_songs,
+            COUNT(*) as "total_operations!: i64",
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) as "successful_syncs!: i64",
+            COUNT(CASE WHEN status = 'failed' THEN 1 END) as "failed_syncs!: i64",
+            COALESCE(SUM(songs_added + songs_removed), 0) as "total_songs!: i64",
             AVG(CASE 
                 WHEN completed_at IS NOT NULL AND started_at IS NOT NULL THEN 
                     (julianday(completed_at) - julianday(started_at)) * 24 * 60 * 60
                 ELSE NULL 
-            END) as avg_sync_time_seconds
+            END) as "avg_sync_time_seconds: f64"
         FROM sync_operations
         WHERE watcher_id = ?
-        "#
+        "#,
+        watcher_id
     )
-    .bind(watcher_id)
     .fetch_one(pool)
     .await?;
 
-    let total_operations = stats.get::<i64, _>("total_operations") as i32;
-    let successful_syncs = stats.get::<Option<i64>, _>("successful_syncs").unwrap_or(0) as i32;
-    let failed_syncs = stats.get::<Option<i64>, _>("failed_syncs").unwrap_or(0) as i32;
+    let total_operations = stats.total_operations as i32;
+    let successful_syncs = stats.successful_syncs as i32;
+    let failed_syncs = stats.failed_syncs as i32;
     let success_rate = if total_operations > 0 {
         successful_syncs as f32 / total_operations as f32 * 100.0
     } else {
@@ -585,7 +627,7 @@ async fn calculate_watcher_statistics(pool: &SqlitePool, watcher_id: i64) -> Res
         successful_syncs,
         failed_syncs,
         success_rate,
-        total_songs_synced: stats.get::<Option<i64>, _>("total_songs").unwrap_or(0) as i32,
-        average_sync_time_seconds: stats.get::<Option<f64>, _>("avg_sync_time_seconds").map(|v| v as f32),
+        total_songs_synced: stats.total_songs as i32,
+        average_sync_time_seconds: stats.avg_sync_time_seconds.map(|v| v as f32),
     })
 }

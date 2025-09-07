@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use rspotify::model::PlayableItem;
 use rspotify::prelude::Id;
@@ -8,10 +6,12 @@ use time::OffsetDateTime;
 
 use super::playlists::SpotifyPlaylistService;
 use super::types::{SpotifyError, SpotifyResult};
-use crate::app::songlink::{SonglinkClient, LinksResponse, Platform};
+use crate::app::songlink::{LinksResponse, Platform, SonglinkClient};
 use crate::users::{
-    models::{SyncPreviewResponse, SyncOperationResponse, SongResponse, SongFailure, SyncOperation},
-    repository_simple::{WatcherRepository, SyncRepository},
+    models::{
+        SongFailure, SongResponse, SyncOperation, SyncOperationResponse, SyncPreviewResponse,
+    },
+    repository_simple::{SyncRepository, WatcherRepository},
 };
 
 /// Spotify synchronization service that integrates with the existing sync system
@@ -56,10 +56,25 @@ impl SpotifySyncService {
         for track_item in source_tracks {
             if let Some(track) = track_item.track {
                 if let PlayableItem::Track(full_track) = track {
-                    let spotify_url = full_track.external_urls.get("spotify").cloned()
-                        .unwrap_or_else(|| format!("spotify:track:{}", full_track.id.as_ref().map(|id| id.id()).unwrap_or("unknown")));
+                    let spotify_url = full_track
+                        .external_urls
+                        .get("spotify")
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            format!(
+                                "spotify:track:{}",
+                                full_track
+                                    .id
+                                    .as_ref()
+                                    .map(|id| id.id())
+                                    .unwrap_or("unknown")
+                            )
+                        });
 
-                    match self.find_track_on_target_service(&spotify_url, target_service).await {
+                    match self
+                        .find_track_on_target_service(&spotify_url, target_service)
+                        .await
+                    {
                         Ok(Some(target_track_info)) => {
                             songs_to_add.push(SongResponse {
                                 id: 0, // Will be populated from database
@@ -101,18 +116,23 @@ impl SpotifySyncService {
     }
 
     /// Execute sync operation for a watcher
-    pub async fn sync_playlist_to_target(&self, watcher_id: i64) -> SpotifyResult<SyncOperationResponse> {
+    pub async fn sync_playlist_to_target(
+        &self,
+        watcher_id: i64,
+    ) -> SpotifyResult<SyncOperationResponse> {
         let watcher_repo = WatcherRepository::new(self.db.clone());
         let sync_repo = SyncRepository::new(self.db.clone());
 
         // Get watcher details
-        let watcher = watcher_repo.get_watcher_by_id(watcher_id)
+        let watcher = watcher_repo
+            .get_watcher_by_id(watcher_id)
             .await
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?
             .ok_or_else(|| SpotifyError::ValidationError("Watcher not found".to_string()))?;
 
         // Create sync operation record
-        let sync_op = sync_repo.create_sync_operation(watcher_id, "spotify_sync")
+        let sync_op = sync_repo
+            .create_sync_operation(watcher_id, "spotify_sync")
             .await
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
@@ -125,22 +145,25 @@ impl SpotifySyncService {
         let user_id = watcher.user_id; // Assuming watcher has user_id field
 
         // Execute sync preview to get songs to add
-        match self.preview_sync(
-            user_id,
-            &watcher.source_playlist_id,
-            &watcher.target_service,
-            watcher.target_playlist_id.as_deref(),
-        ).await {
+        match self
+            .preview_sync(
+                user_id,
+                &watcher.source_playlist_id,
+                &watcher.target_service,
+                watcher.target_playlist_id.as_deref(),
+            )
+            .await
+        {
             Ok(preview) => {
                 songs_added = preview.songs_to_add.len() as i32;
                 songs_failed = preview.songs_failed.len() as i32;
 
                 // TODO: Actually add songs to target playlist
                 // This would require target service-specific implementation
-                
+
                 if !preview.songs_failed.is_empty() {
                     error_message = Some(format!(
-                        "Failed to match {} tracks", 
+                        "Failed to match {} tracks",
                         preview.songs_failed.len()
                     ));
                 }
@@ -160,14 +183,17 @@ impl SpotifySyncService {
             "failed"
         };
 
-        sync_repo.update_sync_operation(
-            sync_op.id,
-            final_status,
-            songs_added,
-            0, // songs_removed - not implemented yet
-            songs_failed,
-            error_message.as_deref(),
-        ).await.map_err(|e| SpotifyError::ApiError(e.to_string()))?;
+        sync_repo
+            .update_sync_operation(
+                sync_op.id,
+                final_status,
+                songs_added,
+                0, // songs_removed - not implemented yet
+                songs_failed,
+                error_message.as_deref(),
+            )
+            .await
+            .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
         // Create the response from the original sync_op with updated values
         let updated_sync_op = SyncOperation {
@@ -180,11 +206,16 @@ impl SpotifySyncService {
             songs_failed,
             error_message: error_message.clone(),
             started_at: sync_op.started_at,
-            completed_at: if final_status != "in_progress" { Some(OffsetDateTime::now_utc()) } else { None },
+            completed_at: if final_status != "in_progress" {
+                Some(OffsetDateTime::now_utc())
+            } else {
+                None
+            },
         };
 
         // Update watcher last sync time
-        watcher_repo.update_last_sync(watcher_id)
+        watcher_repo
+            .update_last_sync(watcher_id)
             .await
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
@@ -217,12 +248,20 @@ impl SpotifySyncService {
         };
 
         // Use Songlink to find the track on other platforms
-        match self.songlink_client.fetch_links(spotify_url, Some("US"), Some(true)).await {
+        match self
+            .songlink_client
+            .fetch_links(spotify_url, Some("US"), Some(true))
+            .await
+        {
             Ok(response) => {
                 if let Some(link) = response.links_by_platform.get(&target_platform) {
                     // Extract the external ID from the URL or entity
-                    let external_id = self.extract_external_id_from_link(&response, &link.entity_unique_id, target_service)?;
-                    
+                    let external_id = self.extract_external_id_from_link(
+                        &response,
+                        &link.entity_unique_id,
+                        target_service,
+                    )?;
+
                     Ok(Some(TargetTrackInfo {
                         external_id,
                         url: link.url.0.to_string(),
@@ -257,24 +296,32 @@ impl SpotifySyncService {
     }
 
     /// Get sync history for a specific watcher
-    pub async fn get_sync_history(&self, watcher_id: i64, limit: Option<i32>) -> SpotifyResult<Vec<SyncOperationResponse>> {
+    pub async fn get_sync_history(
+        &self,
+        watcher_id: i64,
+        limit: Option<i32>,
+    ) -> SpotifyResult<Vec<SyncOperationResponse>> {
         let sync_repo = SyncRepository::new(self.db.clone());
-        
-        let sync_operations = sync_repo.get_sync_operations_by_watcher(watcher_id, limit.unwrap_or(10))
+
+        let sync_operations = sync_repo
+            .get_sync_operations_by_watcher(watcher_id, limit.unwrap_or(10))
             .await
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
-        let responses = sync_operations.into_iter().map(|op| SyncOperationResponse {
-            id: op.id,
-            operation_type: op.operation_type,
-            status: op.status,
-            songs_added: op.songs_added,
-            songs_removed: op.songs_removed,
-            songs_failed: op.songs_failed,
-            error_message: op.error_message,
-            started_at: op.started_at,
-            completed_at: op.completed_at,
-        }).collect();
+        let responses = sync_operations
+            .into_iter()
+            .map(|op| SyncOperationResponse {
+                id: op.id,
+                operation_type: op.operation_type,
+                status: op.status,
+                songs_added: op.songs_added,
+                songs_removed: op.songs_removed,
+                songs_failed: op.songs_failed,
+                error_message: op.error_message,
+                started_at: op.started_at,
+                completed_at: op.completed_at,
+            })
+            .collect();
 
         Ok(responses)
     }
@@ -375,23 +422,26 @@ mod tests {
 
         // Create a mock LinksResponse
         let mut entities = HashMap::new();
-        entities.insert("YOUTUBE_MUSIC::test123".to_string(), crate::app::songlink::Entity {
-            id: "test123".to_string(),
-            entity_type: crate::app::songlink::EntityType::Song,
-            title: Some("Test Song".to_string()),
-            artist_name: Some("Test Artist".to_string()),
-            thumbnail_url: None,
-            thumbnail_width: None,
-            thumbnail_height: None,
-            api_provider: crate::app::songlink::APIProvider::Youtube,
-            platforms: vec![Platform::YoutubeMusic],
-        });
+        entities.insert(
+            "YOUTUBE_MUSIC::test123".to_string(),
+            crate::app::songlink::Entity {
+                id: "test123".to_string(),
+                entity_type: crate::app::songlink::EntityType::Song,
+                title: Some("Test Song".to_string()),
+                artist_name: Some("Test Artist".to_string()),
+                thumbnail_url: None,
+                thumbnail_width: None,
+                thumbnail_height: None,
+                api_provider: crate::app::songlink::APIProvider::Youtube,
+                platforms: vec![Platform::YoutubeMusic],
+            },
+        );
 
         let response = LinksResponse {
             entity_unique_id: "SPOTIFY::spotify_id".to_string(),
             user_country: "US".to_string(),
             page_url: crate::app::songlink::UrlWrapper(
-                url::Url::parse("https://song.link/test").unwrap()
+                url::Url::parse("https://song.link/test").unwrap(),
             ),
             links_by_platform: HashMap::new(),
             entities_by_unique_id: entities,
@@ -400,7 +450,7 @@ mod tests {
         let result = service.extract_external_id_from_link(
             &response,
             "YOUTUBE_MUSIC::test123",
-            "youtube_music"
+            "youtube_music",
         );
 
         assert!(result.is_ok());

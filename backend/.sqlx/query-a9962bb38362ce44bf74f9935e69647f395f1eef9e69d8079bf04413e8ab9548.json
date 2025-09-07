@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                so.id, so.operation_type, so.status, so.songs_added, so.songs_removed,\n                so.started_at, so.completed_at, w.name as watcher_name\n            FROM sync_operations so\n            JOIN watchers w ON so.watcher_id = w.id\n            WHERE w.user_id = ?\n            ORDER BY so.started_at DESC\n            LIMIT 10\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "operation_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "status",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "songs_added",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "songs_removed",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "started_at",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "completed_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "watcher_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "a9962bb38362ce44bf74f9935e69647f395f1eef9e69d8079bf04413e8ab9548"
+}

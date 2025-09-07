@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json;
-use sqlx::{SqlitePool, Row};
+use sqlx::SqlitePool;
 use time::OffsetDateTime;
 
 use crate::users::{models::UserCredential, AuthSession};
@@ -92,9 +92,9 @@ mod get {
             Some(user) => user,
             None => return Err(StatusCode::UNAUTHORIZED),
         };
-        
+
         // Get basic dashboard stats
-        let watcher_stats = sqlx::query(
+        let watcher_stats = sqlx::query!(
             r#"
             SELECT 
                 COUNT(*) as total_watchers,
@@ -102,34 +102,34 @@ mod get {
                 COUNT(CASE WHEN last_sync_at IS NOT NULL THEN 1 END) as synced_watchers
             FROM watchers 
             WHERE user_id = ?
-            "#
+            "#,
+            user.id
         )
-        .bind(user.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let sync_stats = sqlx::query(
+        let sync_stats = sqlx::query!(
             r#"
             SELECT 
                 COUNT(*) as total_sync_operations,
                 COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_syncs,
                 COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_syncs,
-                SUM(songs_added) as total_songs_added,
-                SUM(songs_removed) as total_songs_removed,
-                MAX(started_at) as last_sync_time
+                COALESCE(SUM(songs_added), 0) as total_songs_added,
+                COALESCE(SUM(songs_removed), 0) as total_songs_removed,
+                MAX(started_at) as "last_sync_time: Option<OffsetDateTime>"
             FROM sync_operations so
             JOIN watchers w ON so.watcher_id = w.id
             WHERE w.user_id = ?
-            "#
+            "#,
+            user.id
         )
-        .bind(user.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         // Get recent activity (last 10 operations)
-        let recent_activity = sqlx::query(
+        let recent_activity = sqlx::query!(
             r#"
             SELECT 
                 so.id, so.operation_type, so.status, so.songs_added, so.songs_removed,
@@ -139,9 +139,9 @@ mod get {
             WHERE w.user_id = ?
             ORDER BY so.started_at DESC
             LIMIT 10
-            "#
+            "#,
+            user.id
         )
-        .bind(user.id)
         .fetch_all(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -150,14 +150,14 @@ mod get {
             .into_iter()
             .map(|row| {
                 serde_json::json!({
-                    "id": row.get::<i64, _>("id"),
-                    "type": row.get::<String, _>("operation_type"),
-                    "status": row.get::<String, _>("status"),
-                    "watcher_name": row.get::<String, _>("watcher_name"),
-                    "songs_added": row.get::<i32, _>("songs_added"),
-                    "songs_removed": row.get::<i32, _>("songs_removed"),
-                    "started_at": row.get::<OffsetDateTime, _>("started_at"),
-                    "completed_at": row.get::<Option<OffsetDateTime>, _>("completed_at")
+                    "id": row.id,
+                    "type": row.operation_type,
+                    "status": row.status,
+                    "watcher_name": row.watcher_name,
+                    "songs_added": row.songs_added,
+                    "songs_removed": row.songs_removed,
+                    "started_at": row.started_at,
+                    "completed_at": row.completed_at
                 })
             })
             .collect();
@@ -168,15 +168,15 @@ mod get {
                 "username": user.username
             },
             "stats": {
-                "total_watchers": watcher_stats.get::<i64, _>("total_watchers"),
-                "active_watchers": watcher_stats.get::<Option<i64>, _>("active_watchers").unwrap_or(0),
-                "synced_watchers": watcher_stats.get::<Option<i64>, _>("synced_watchers").unwrap_or(0),
-                "total_sync_operations": sync_stats.get::<i64, _>("total_sync_operations"),
-                "successful_syncs": sync_stats.get::<Option<i64>, _>("successful_syncs").unwrap_or(0),
-                "failed_syncs": sync_stats.get::<Option<i64>, _>("failed_syncs").unwrap_or(0),
-                "total_songs_added": sync_stats.get::<Option<i64>, _>("total_songs_added").unwrap_or(0),
-                "total_songs_removed": sync_stats.get::<Option<i64>, _>("total_songs_removed").unwrap_or(0),
-                "last_sync_time": sync_stats.get::<Option<OffsetDateTime>, _>("last_sync_time")
+                "total_watchers": watcher_stats.total_watchers,
+                "active_watchers": watcher_stats.active_watchers,
+                "synced_watchers": watcher_stats.synced_watchers,
+                "total_sync_operations": sync_stats.total_sync_operations,
+                "successful_syncs": sync_stats.successful_syncs,
+                "failed_syncs": sync_stats.failed_syncs,
+                "total_songs_added": sync_stats.total_songs_added,
+                "total_songs_removed": sync_stats.total_songs_removed,
+                "last_sync_time": sync_stats.last_sync_time
             },
             "recent_activity": activity
         });
@@ -308,11 +308,13 @@ async fn get_user_service_connections(
     pool: &SqlitePool,
     user_id: i64,
 ) -> Result<Vec<ServiceConnectionStatus>, sqlx::Error> {
-    let rows =
-        sqlx::query_as::<_, UserCredential>("SELECT * FROM user_credentials WHERE user_id = ?")
-            .bind(user_id)
-            .fetch_all(pool)
-            .await?;
+    let rows = sqlx::query_as!(
+        UserCredential,
+        "SELECT * FROM user_credentials WHERE user_id = ?",
+        user_id
+    )
+    .fetch_all(pool)
+    .await?;
 
     let mut connections = Vec::new();
     let now = OffsetDateTime::now_utc();
@@ -328,7 +330,7 @@ async fn get_user_service_connections(
             service: row.service,
             is_connected: true,
             expires_at: row.expires_at,
-            last_successful_auth: Some(row.updated_at),
+            last_successful_auth: row.updated_at,
             requires_reauth,
         });
     }
@@ -355,11 +357,13 @@ async fn update_user_profile(
     user_id: i64,
     new_username: &str,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE users SET username = ? WHERE id = ?")
-        .bind(new_username)
-        .bind(user_id)
-        .execute(pool)
-        .await?;
+    sqlx::query!(
+        "UPDATE users SET username = ? WHERE id = ?",
+        new_username,
+        user_id
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -369,11 +373,13 @@ async fn delete_user_credentials(
     user_id: i64,
     service: &str,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM user_credentials WHERE user_id = ? AND service = ?")
-        .bind(user_id)
-        .bind(service)
-        .execute(pool)
-        .await?;
+    sqlx::query!(
+        "DELETE FROM user_credentials WHERE user_id = ? AND service = ?",
+        user_id,
+        service
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -432,21 +438,17 @@ mod tests {
         let pool = setup_test_db().await;
 
         // Insert test user
-        sqlx::query("INSERT INTO users (id, username) VALUES (1, 'testuser')")
+        sqlx::query!("INSERT INTO users (id, username) VALUES (1, 'testuser')")
             .execute(&pool)
             .await
             .unwrap();
 
         // Insert test credential
         let now = OffsetDateTime::now_utc();
-        sqlx::query(
-            "INSERT INTO user_credentials (user_id, service, access_token, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+        sqlx::query!(
+            "INSERT INTO user_credentials (user_id, service, access_token, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            1, "youtube_music", "test_token", now, now
         )
-        .bind(1)
-        .bind("youtube_music")
-        .bind("test_token")
-        .bind(now)
-        .bind(now)
         .execute(&pool)
         .await
         .unwrap();
@@ -471,7 +473,7 @@ mod tests {
         let pool = setup_test_db().await;
 
         // Insert test user
-        sqlx::query("INSERT INTO users (id, username) VALUES (1, 'testuser')")
+        sqlx::query!("INSERT INTO users (id, username) VALUES (1, 'testuser')")
             .execute(&pool)
             .await
             .unwrap();
@@ -480,12 +482,12 @@ mod tests {
         update_user_profile(&pool, 1, "newusername").await.unwrap();
 
         // Verify update
-        let row = sqlx::query("SELECT username FROM users WHERE id = 1")
+        let row = sqlx::query!("SELECT username FROM users WHERE id = 1")
             .fetch_one(&pool)
             .await
             .unwrap();
 
-        let username: String = row.get("username");
+        let username: String = row.username;
         assert_eq!(username, "newusername");
     }
 }

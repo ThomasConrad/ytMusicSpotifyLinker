@@ -11,15 +11,15 @@ pub struct User {
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct UserCredential {
-    pub id: i64,
+    pub id: Option<i64>,
     pub user_id: i64,
     pub service: String,
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<OffsetDateTime>,
     pub token_scope: Option<String>,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
+    pub created_at: Option<OffsetDateTime>,
+    pub updated_at: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

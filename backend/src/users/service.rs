@@ -1,5 +1,5 @@
 use axum_login::AuthnBackend;
-use sqlx::{SqlitePool, Row};
+use sqlx::SqlitePool;
 use thiserror::Error;
 
 use crate::users::{
@@ -169,9 +169,7 @@ impl UserService {
             }
         }
 
-        sqlx::query("UPDATE users SET username = ? WHERE id = ?")
-            .bind(&new_username)
-            .bind(user_id)
+        sqlx::query!("UPDATE users SET username = ? WHERE id = ?", new_username, user_id)
             .execute(&self.pool)
             .await?;
 
@@ -179,15 +177,14 @@ impl UserService {
     }
 
     pub async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, ServiceError> {
-        let row = sqlx::query("SELECT id, username FROM users WHERE username = ?")
-            .bind(username)
+        let row = sqlx::query!("SELECT id, username FROM users WHERE username = ?", username)
             .fetch_optional(&self.pool)
             .await?;
 
         if let Some(row) = row {
             Ok(Some(User {
-                id: row.get("id"),
-                username: row.get("username"),
+                id: row.id,
+                username: row.username,
                 password: "[redacted]".to_string(), // Don't expose actual password
             }))
         } else {
@@ -196,10 +193,10 @@ impl UserService {
     }
 
     pub async fn get_user_service_connections(&self, user_id: i64) -> Result<Vec<UserCredential>, ServiceError> {
-        let rows = sqlx::query_as::<_, UserCredential>(
-            "SELECT * FROM user_credentials WHERE user_id = ?"
+        let rows = sqlx::query_as!(UserCredential,
+            "SELECT * FROM user_credentials WHERE user_id = ?",
+            user_id
         )
-        .bind(user_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -212,9 +209,7 @@ impl UserService {
             return Err(ServiceError::ValidationError(format!("Unsupported service: {}", service)));
         }
 
-        let result = sqlx::query("DELETE FROM user_credentials WHERE user_id = ? AND service = ?")
-            .bind(user_id)
-            .bind(service)
+        let result = sqlx::query!("DELETE FROM user_credentials WHERE user_id = ? AND service = ?", user_id, service)
             .execute(&self.pool)
             .await?;
 
@@ -273,7 +268,7 @@ impl UserService {
         let limit = limit.unwrap_or(50).min(200); // Cap at 200
         let offset = offset.unwrap_or(0).max(0);
 
-        let rows = sqlx::query(
+        let rows = sqlx::query!(
             r#"
             SELECT id, watcher_id, operation_type, status, songs_added, songs_removed, 
                    songs_failed, error_message, started_at, completed_at
@@ -281,27 +276,25 @@ impl UserService {
             WHERE watcher_id = ? 
             ORDER BY started_at DESC
             LIMIT ? OFFSET ?
-            "#
+            "#,
+            watcher_id, limit, offset
         )
-        .bind(watcher_id)
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&self.pool)
         .await?;
 
         let mut sync_operations = Vec::new();
         for row in rows {
             sync_operations.push(SyncOperation {
-                id: row.get("id"),
-                watcher_id: row.get("watcher_id"),
-                operation_type: row.get("operation_type"),
-                status: row.get("status"),
-                songs_added: row.get("songs_added"),
-                songs_removed: row.get("songs_removed"),
-                songs_failed: row.get("songs_failed"),
-                error_message: row.get("error_message"),
-                started_at: row.get("started_at"),
-                completed_at: row.get("completed_at"),
+                id: row.id.unwrap_or(0),
+                watcher_id: row.watcher_id,
+                operation_type: row.operation_type,
+                status: row.status,
+                songs_added: row.songs_added.unwrap_or(0) as i32,
+                songs_removed: row.songs_removed.unwrap_or(0) as i32,
+                songs_failed: row.songs_failed.unwrap_or(0) as i32,
+                error_message: row.error_message,
+                started_at: row.started_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                completed_at: row.completed_at,
             });
         }
 
@@ -315,19 +308,19 @@ impl UserService {
         let active_watchers = watchers.iter().filter(|w| w.is_active).count() as i32;
 
         // Get recent sync operations count
-        let recent_syncs_row = sqlx::query(
+        let recent_syncs_row = sqlx::query!(
             r#"
             SELECT COUNT(*) as count
             FROM sync_operations so
             JOIN watchers w ON so.watcher_id = w.id
             WHERE w.user_id = ? AND so.started_at >= datetime('now', '-24 hours')
-            "#
+            "#,
+            user_id
         )
-        .bind(user_id)
         .fetch_one(&self.pool)
         .await?;
         
-        let recent_syncs = recent_syncs_row.get::<i32, _>("count");
+        let recent_syncs = recent_syncs_row.count as i32;
 
         // Get service connections
         let connections = self.get_user_service_connections(user_id).await?;
@@ -364,7 +357,7 @@ mod tests {
             .expect("Failed to create test database");
 
         // Create tables
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
@@ -376,7 +369,7 @@ mod tests {
         .await
         .expect("Failed to create users table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE user_credentials (
                 id INTEGER PRIMARY KEY,
@@ -396,7 +389,7 @@ mod tests {
         .await
         .expect("Failed to create user_credentials table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE watchers (
                 id INTEGER PRIMARY KEY,
@@ -420,7 +413,7 @@ mod tests {
         .await
         .expect("Failed to create watchers table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE sync_operations (
                 id INTEGER PRIMARY KEY,
@@ -450,7 +443,7 @@ mod tests {
         let service = UserService::new(pool.clone());
 
         // Insert test user
-        sqlx::query("INSERT INTO users (id, username) VALUES (1, 'testuser')")
+        sqlx::query!("INSERT INTO users (id, username) VALUES (1, 'testuser')")
             .execute(&pool)
             .await
             .unwrap();
@@ -480,19 +473,18 @@ mod tests {
         let service = UserService::new(pool.clone());
 
         // Insert test user
-        sqlx::query("INSERT INTO users (id, username) VALUES (1, 'testuser')")
+        sqlx::query!("INSERT INTO users (id, username) VALUES (1, 'testuser')")
             .execute(&pool)
             .await
             .unwrap();
 
         // Insert test data
         let now = OffsetDateTime::now_utc();
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO watchers (user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, created_at, updated_at) 
-             VALUES (1, 'test_watcher', 'youtube_music', 'yt_123', 'spotify', 'sp_123', ?, ?)"
+             VALUES (1, 'test_watcher', 'youtube_music', 'yt_123', 'spotify', 'sp_123', ?, ?)",
+             now, now
         )
-        .bind(now)
-        .bind(now)
         .execute(&pool)
         .await
         .unwrap();

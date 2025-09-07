@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT \n            COUNT(*) as \"total_operations!: i64\",\n            COUNT(CASE WHEN status = 'completed' THEN 1 END) as \"successful_syncs!: i64\",\n            COUNT(CASE WHEN status = 'failed' THEN 1 END) as \"failed_syncs!: i64\",\n            COALESCE(SUM(songs_added + songs_removed), 0) as \"total_songs!: i64\",\n            AVG(CASE \n                WHEN completed_at IS NOT NULL AND started_at IS NOT NULL THEN \n                    (julianday(completed_at) - julianday(started_at)) * 24 * 60 * 60\n                ELSE NULL \n            END) as \"avg_sync_time_seconds: f64\"\n        FROM sync_operations\n        WHERE watcher_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_operations!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "successful_syncs!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "failed_syncs!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "total_songs!: i64",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "avg_sync_time_seconds: f64",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "f29ac492450a4b597934dadb3a8d0e023c92a7c158fddada2dd8fc897101622f"
+}

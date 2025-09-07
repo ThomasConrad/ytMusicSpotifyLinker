@@ -1,15 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rand::{thread_rng, Rng};
-use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use rspotify::prelude::*;
+use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::types::{SpotifyError, SpotifyResult, OAuthState};
+use super::types::{OAuthState, SpotifyError, SpotifyResult};
 use crate::users::models::UserCredential;
 
 /// Generate a code verifier for PKCE
@@ -26,7 +26,8 @@ fn generate_code_verifier() -> String {
 /// Generate a code challenge from a code verifier
 fn generate_code_challenge(code_verifier: &str) -> String {
     let digest = Sha256::digest(code_verifier.as_bytes());
-    BASE64.encode(digest)
+    BASE64
+        .encode(digest)
         .trim_end_matches('=') // Remove padding
         .replace('+', "-")
         .replace('/', "_")
@@ -97,16 +98,23 @@ impl SpotifyAuthService {
         let mut spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
 
         // Generate authorization URL
-        let auth_url = spotify.get_authorize_url(None)
-            .map_err(|e| SpotifyError::AuthenticationFailed(format!("Failed to generate auth URL: {}", e)))?;
+        let auth_url = spotify.get_authorize_url(None).map_err(|e| {
+            SpotifyError::AuthenticationFailed(format!("Failed to generate auth URL: {}", e))
+        })?;
 
         Ok(auth_url)
     }
 
     /// Complete the OAuth 2.0 flow and store tokens
-    pub async fn complete_auth_flow(&mut self, code: &str, state: &str) -> SpotifyResult<UserCredential> {
+    pub async fn complete_auth_flow(
+        &mut self,
+        code: &str,
+        state: &str,
+    ) -> SpotifyResult<UserCredential> {
         // Validate and retrieve OAuth state
-        let oauth_state = self.oauth_states.remove(state)
+        let oauth_state = self
+            .oauth_states
+            .remove(state)
             .ok_or(SpotifyError::InvalidOAuthState)?;
 
         // Check if state has expired
@@ -137,38 +145,48 @@ impl SpotifyAuthService {
             ..Default::default()
         };
 
-        let mut spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
+        let spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
 
         // Exchange authorization code for tokens
-        spotify.request_token(&code)
-            .await
-            .map_err(|e| SpotifyError::AuthenticationFailed(format!("Token exchange failed: {}", e)))?;
+        spotify.request_token(&code).await.map_err(|e| {
+            SpotifyError::AuthenticationFailed(format!("Token exchange failed: {}", e))
+        })?;
 
         // Get the token from Spotify client
-        let token = spotify.token.lock().await.unwrap()
+        let token = spotify
+            .token
+            .lock()
+            .await
+            .unwrap()
             .as_ref()
-            .ok_or(SpotifyError::AuthenticationFailed("No token received".to_string()))?
+            .ok_or(SpotifyError::AuthenticationFailed(
+                "No token received".to_string(),
+            ))?
             .clone();
 
         // Calculate expiry time
-        let expires_at = Some(OffsetDateTime::now_utc() + time::Duration::seconds(token.expires_in.num_seconds()));
+        let expires_at = Some(
+            OffsetDateTime::now_utc() + time::Duration::seconds(token.expires_in.num_seconds()),
+        );
 
         // Encrypt tokens before storage (simple base64 for now, use proper encryption in production)
         let encrypted_access_token = BASE64.encode(&token.access_token);
         let encrypted_refresh_token = token.refresh_token.as_ref().map(|t| BASE64.encode(t));
 
-        // Create scope string  
+        // Create scope string
         let scope_string = Some(token.scopes.iter().cloned().collect::<Vec<_>>().join(" "));
 
         // Store credentials in database
-        let user_credential = self.store_credentials(
-            oauth_state.user_id,
-            "spotify",
-            &encrypted_access_token,
-            encrypted_refresh_token.as_deref(),
-            expires_at,
-            scope_string.as_deref(),
-        ).await?;
+        let user_credential = self
+            .store_credentials(
+                oauth_state.user_id,
+                "spotify",
+                &encrypted_access_token,
+                encrypted_refresh_token.as_deref(),
+                expires_at,
+                scope_string.as_deref(),
+            )
+            .await?;
 
         Ok(user_credential)
     }
@@ -176,17 +194,22 @@ impl SpotifyAuthService {
     /// Refresh expired access token
     pub async fn refresh_tokens(&self, user_id: i64) -> SpotifyResult<bool> {
         // Get existing credentials
-        let credential = self.get_user_credential(user_id, "spotify").await?
-            .ok_or(SpotifyError::AuthenticationFailed("No Spotify credentials found".to_string()))?;
+        let credential = self.get_user_credential(user_id, "spotify").await?.ok_or(
+            SpotifyError::AuthenticationFailed("No Spotify credentials found".to_string()),
+        )?;
 
-        let refresh_token = credential.refresh_token
+        let refresh_token = credential
+            .refresh_token
             .as_ref()
             .ok_or(SpotifyError::TokenExpired)?;
 
         // Decrypt refresh token
-        let decrypted_refresh_token = String::from_utf8(BASE64.decode(refresh_token)
-            .map_err(|e| SpotifyError::Generic(format!("Token decryption failed: {}", e)))?
-        ).map_err(|e| SpotifyError::Generic(format!("Token decoding failed: {}", e)))?;
+        let decrypted_refresh_token = String::from_utf8(
+            BASE64
+                .decode(refresh_token)
+                .map_err(|e| SpotifyError::Generic(format!("Token decryption failed: {}", e)))?,
+        )
+        .map_err(|e| SpotifyError::Generic(format!("Token decoding failed: {}", e)))?;
 
         // Create Spotify client with refresh token
         let creds = Credentials::new(&self.client_id, "");
@@ -203,7 +226,7 @@ impl SpotifyAuthService {
             ..Default::default()
         };
 
-        let mut spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
+        let spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
 
         // Set the current token
         let current_token = Token {
@@ -217,18 +240,26 @@ impl SpotifyAuthService {
         *spotify.token.lock().await.unwrap() = Some(current_token);
 
         // Refresh the token
-        spotify.refresh_token()
-            .await
-            .map_err(|e| SpotifyError::AuthenticationFailed(format!("Token refresh failed: {}", e)))?;
+        spotify.refresh_token().await.map_err(|e| {
+            SpotifyError::AuthenticationFailed(format!("Token refresh failed: {}", e))
+        })?;
 
         // Get the new token
-        let new_token = spotify.token.lock().await.unwrap()
+        let new_token = spotify
+            .token
+            .lock()
+            .await
+            .unwrap()
             .as_ref()
-            .ok_or(SpotifyError::AuthenticationFailed("No token received after refresh".to_string()))?
+            .ok_or(SpotifyError::AuthenticationFailed(
+                "No token received after refresh".to_string(),
+            ))?
             .clone();
 
         // Calculate new expiry time
-        let expires_at = Some(OffsetDateTime::now_utc() + time::Duration::seconds(new_token.expires_in.num_seconds()));
+        let expires_at = Some(
+            OffsetDateTime::now_utc() + time::Duration::seconds(new_token.expires_in.num_seconds()),
+        );
 
         // Encrypt new access token
         let encrypted_access_token = BASE64.encode(&new_token.access_token);
@@ -241,7 +272,8 @@ impl SpotifyAuthService {
             &encrypted_access_token,
             encrypted_refresh_token.as_deref(),
             expires_at,
-        ).await?;
+        )
+        .await?;
 
         Ok(true)
     }
@@ -249,12 +281,14 @@ impl SpotifyAuthService {
     /// Revoke tokens and remove stored credentials
     pub async fn revoke_tokens(&self, user_id: i64) -> SpotifyResult<()> {
         // Remove from database
-        sqlx::query("DELETE FROM user_credentials WHERE user_id = ? AND service = ?")
-            .bind(user_id)
-            .bind("spotify")
-            .execute(&self.db)
-            .await
-            .map_err(|e| SpotifyError::DatabaseError(e))?;
+        sqlx::query!(
+            "DELETE FROM user_credentials WHERE user_id = ? AND service = ?",
+            user_id,
+            "spotify"
+        )
+        .execute(&self.db)
+        .await
+        .map_err(|e| SpotifyError::DatabaseError(e))?;
 
         Ok(())
     }
@@ -276,8 +310,9 @@ impl SpotifyAuthService {
 
     /// Get decrypted access token for API calls
     pub async fn get_access_token(&self, user_id: i64) -> SpotifyResult<String> {
-        let credential = self.get_user_credential(user_id, "spotify").await?
-            .ok_or(SpotifyError::AuthenticationFailed("No Spotify credentials found".to_string()))?;
+        let credential = self.get_user_credential(user_id, "spotify").await?.ok_or(
+            SpotifyError::AuthenticationFailed("No Spotify credentials found".to_string()),
+        )?;
 
         // Check if token is expired
         if let Some(expires_at) = credential.expires_at {
@@ -287,9 +322,12 @@ impl SpotifyAuthService {
         }
 
         // Decrypt access token
-        let decrypted_token = String::from_utf8(BASE64.decode(&credential.access_token)
-            .map_err(|e| SpotifyError::Generic(format!("Token decryption failed: {}", e)))?
-        ).map_err(|e| SpotifyError::Generic(format!("Token decoding failed: {}", e)))?;
+        let decrypted_token = String::from_utf8(
+            BASE64
+                .decode(&credential.access_token)
+                .map_err(|e| SpotifyError::Generic(format!("Token decryption failed: {}", e)))?,
+        )
+        .map_err(|e| SpotifyError::Generic(format!("Token decoding failed: {}", e)))?;
 
         Ok(decrypted_token)
     }
@@ -306,7 +344,8 @@ impl SpotifyAuthService {
     ) -> SpotifyResult<UserCredential> {
         let now = OffsetDateTime::now_utc();
 
-        let credential = sqlx::query_as::<_, UserCredential>(
+        let credential = sqlx::query_as!(
+            UserCredential,
             r#"
             INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -318,15 +357,8 @@ impl SpotifyAuthService {
                 updated_at = excluded.updated_at
             RETURNING *
             "#,
+            user_id, service, access_token, refresh_token, expires_at, token_scope, now, now
         )
-        .bind(user_id)
-        .bind(service)
-        .bind(access_token)
-        .bind(refresh_token)
-        .bind(expires_at)
-        .bind(token_scope)
-        .bind(now)
-        .bind(now)
         .fetch_one(&self.db)
         .await
         .map_err(|e| SpotifyError::DatabaseError(e))?;
@@ -345,19 +377,19 @@ impl SpotifyAuthService {
     ) -> SpotifyResult<()> {
         let now = OffsetDateTime::now_utc();
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE user_credentials 
             SET access_token = ?, refresh_token = ?, expires_at = ?, updated_at = ?
             WHERE user_id = ? AND service = ?
             "#,
+            access_token,
+            refresh_token,
+            expires_at,
+            now,
+            user_id,
+            service
         )
-        .bind(access_token)
-        .bind(refresh_token)
-        .bind(expires_at)
-        .bind(now)
-        .bind(user_id)
-        .bind(service)
         .execute(&self.db)
         .await
         .map_err(|e| SpotifyError::DatabaseError(e))?;
@@ -366,12 +398,17 @@ impl SpotifyAuthService {
     }
 
     /// Get user credential from database
-    async fn get_user_credential(&self, user_id: i64, service: &str) -> SpotifyResult<Option<UserCredential>> {
-        let credential = sqlx::query_as::<_, UserCredential>(
+    async fn get_user_credential(
+        &self,
+        user_id: i64,
+        service: &str,
+    ) -> SpotifyResult<Option<UserCredential>> {
+        let credential = sqlx::query_as!(
+            UserCredential,
             "SELECT * FROM user_credentials WHERE user_id = ? AND service = ?",
+            user_id,
+            service
         )
-        .bind(user_id)
-        .bind(service)
         .fetch_optional(&self.db)
         .await
         .map_err(|e| SpotifyError::DatabaseError(e))?;

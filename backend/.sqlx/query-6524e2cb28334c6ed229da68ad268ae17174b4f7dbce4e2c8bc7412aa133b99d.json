@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT COUNT(*) as count\n            FROM sync_operations so\n            JOIN watchers w ON so.watcher_id = w.id\n            WHERE w.user_id = ? AND so.started_at >= datetime('now', '-24 hours')\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6524e2cb28334c6ed229da68ad268ae17174b4f7dbce4e2c8bc7412aa133b99d"
+}

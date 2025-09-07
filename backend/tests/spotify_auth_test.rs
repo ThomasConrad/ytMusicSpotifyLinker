@@ -307,15 +307,15 @@ async fn test_spotify_auth_status_authenticated() -> Result<()> {
     create_authenticated_user(&client, &base_url, "auth_status_user").await?;
 
     // Insert mock credentials into database
-    let user_record = sqlx::query("SELECT id FROM users WHERE username = 'auth_status_user'")
+    let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'auth_status_user'")
         .fetch_one(&pool)
         .await?;
     
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
-         VALUES (?, 'spotify', 'mock_token_456', 'mock_refresh_456', datetime('now', '+1 hour'), 'user-read-private')"
+         VALUES (?, 'spotify', 'mock_token_456', 'mock_refresh_456', datetime('now', '+1 hour'), 'user-read-private')",
+         user_record.id
     )
-    .bind(user_record.get::<i64, _>("id"))
     .execute(&pool)
     .await?;
 

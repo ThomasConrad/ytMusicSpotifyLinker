@@ -120,16 +120,16 @@ async fn test_spotify_playlist_operations() -> Result<()> {
     create_authenticated_user(&client, &base_url, "playlist_user").await?;
 
     // Add mock credentials to the database for testing
-    let user_record = sqlx::query("SELECT id FROM users WHERE username = 'playlist_user'")
+    let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'playlist_user'")
         .fetch_one(&pool)
         .await?;
     
-    let user_id: i64 = user_record.get("id");
-    sqlx::query(
+    let user_id: i64 = user_record.id;
+    sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
-         VALUES (?, 'spotify', 'mock_access_token', 'mock_refresh_token', datetime('now', '+1 hour'), 'playlist-read-private')"
+         VALUES (?, 'spotify', 'mock_access_token', 'mock_refresh_token', datetime('now', '+1 hour'), 'playlist-read-private')",
+         user_id
     )
-    .bind(user_id)
     .execute(&pool)
     .await?;
 
@@ -217,7 +217,7 @@ mod playlist_service_tests {
             .expect("Failed to create test database");
 
         // Create required tables for testing
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE user_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,7 +237,7 @@ mod playlist_service_tests {
         .await
         .expect("Failed to create user_credentials table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE playlists (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -258,7 +258,7 @@ mod playlist_service_tests {
         .await
         .expect("Failed to create playlists table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE songs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -279,7 +279,7 @@ mod playlist_service_tests {
         .await
         .expect("Failed to create songs table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE playlist_songs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -363,7 +363,7 @@ mod sync_service_tests {
             .expect("Failed to create test database");
 
         // Create required tables for testing
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE watchers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -385,7 +385,7 @@ mod sync_service_tests {
         .await
         .expect("Failed to create watchers table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE sync_operations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -406,7 +406,7 @@ mod sync_service_tests {
         .await
         .expect("Failed to create sync_operations table");
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             CREATE TABLE user_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,10 +1,12 @@
-use rspotify::model::{FullPlaylist, PlaylistId, SimplifiedPlaylist, PlaylistItem, TrackId, PlayableId};
+use rspotify::model::{
+    FullPlaylist, PlayableId, PlaylistId, PlaylistItem, SimplifiedPlaylist, TrackId,
+};
 use rspotify::prelude::*;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use time::OffsetDateTime;
+use tokio::sync::Mutex;
 
 use super::client::SpotifyClient;
 use super::types::{SpotifyError, SpotifyResult};
@@ -39,7 +41,7 @@ impl SpotifyPlaylistService {
     /// Create a new Spotify playlist service
     pub fn new(client_id: String, redirect_uri: String, db: SqlitePool) -> Self {
         let client = SpotifyClient::new(client_id, redirect_uri, db.clone());
-        
+
         Self {
             client,
             db,
@@ -57,8 +59,11 @@ impl SpotifyPlaylistService {
 
     /// Get user's playlists with caching
     pub async fn get_user_playlists(&self, user_id: i64) -> SpotifyResult<Vec<SimplifiedPlaylist>> {
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
-        
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
+
         // Get current user's playlists
         let mut playlists = Vec::new();
         let mut offset = 0;
@@ -87,7 +92,11 @@ impl SpotifyPlaylistService {
     }
 
     /// Get detailed playlist information with caching
-    pub async fn get_playlist(&self, user_id: i64, playlist_id: &str) -> SpotifyResult<FullPlaylist> {
+    pub async fn get_playlist(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+    ) -> SpotifyResult<FullPlaylist> {
         let cache_key = format!("{}:{}", user_id, playlist_id);
         let now = OffsetDateTime::now_utc();
 
@@ -103,7 +112,10 @@ impl SpotifyPlaylistService {
         }
 
         // Cache miss or expired, fetch from Spotify
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
@@ -115,18 +127,25 @@ impl SpotifyPlaylistService {
         // Update cache
         {
             let mut cache = self.playlist_cache.lock().await;
-            cache.insert(cache_key, PlaylistCacheEntry {
-                playlist: playlist.clone(),
-                cached_at: now,
-                tracks_cached: false,
-            });
+            cache.insert(
+                cache_key,
+                PlaylistCacheEntry {
+                    playlist: playlist.clone(),
+                    cached_at: now,
+                    tracks_cached: false,
+                },
+            );
         }
 
         Ok(playlist)
     }
 
     /// Get playlist tracks with caching and batch processing
-    pub async fn get_playlist_tracks(&self, user_id: i64, playlist_id: &str) -> SpotifyResult<Vec<PlaylistItem>> {
+    pub async fn get_playlist_tracks(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+    ) -> SpotifyResult<Vec<PlaylistItem>> {
         let cache_key = format!("{}:{}", user_id, playlist_id);
         let now = OffsetDateTime::now_utc();
 
@@ -142,7 +161,10 @@ impl SpotifyPlaylistService {
         }
 
         // Cache miss or expired, fetch from Spotify
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
@@ -171,10 +193,13 @@ impl SpotifyPlaylistService {
         // Update cache
         {
             let mut cache = self.track_cache.lock().await;
-            cache.insert(cache_key, TrackCacheEntry {
-                tracks: tracks.clone(),
-                cached_at: now,
-            });
+            cache.insert(
+                cache_key,
+                TrackCacheEntry {
+                    tracks: tracks.clone(),
+                    cached_at: now,
+                },
+            );
         }
 
         Ok(tracks)
@@ -191,23 +216,25 @@ impl SpotifyPlaylistService {
             return Ok(());
         }
 
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
         // Convert track IDs
-        let track_ids: Result<Vec<TrackId>, _> = track_ids
-            .iter()
-            .map(|id| TrackId::from_id(id))
-            .collect();
+        let track_ids: Result<Vec<TrackId>, _> =
+            track_ids.iter().map(|id| TrackId::from_id(id)).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 
         // Add tracks in batches (Spotify allows max 100 per request)
         const BATCH_SIZE: usize = 100;
-        
+
         for chunk in track_ids.chunks(BATCH_SIZE) {
-            let playable_ids: Vec<PlayableId> = chunk.iter().map(|t| PlayableId::Track(t.clone())).collect();
+            let playable_ids: Vec<PlayableId> =
+                chunk.iter().map(|t| PlayableId::Track(t.clone())).collect();
             spotify
                 .playlist_add_items(playlist_id.clone(), playable_ids, None)
                 .await
@@ -235,29 +262,27 @@ impl SpotifyPlaylistService {
             return Ok(());
         }
 
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
         // Convert track IDs
-        let track_ids: Result<Vec<TrackId>, _> = track_ids
-            .iter()
-            .map(|id| TrackId::from_id(id))
-            .collect();
+        let track_ids: Result<Vec<TrackId>, _> =
+            track_ids.iter().map(|id| TrackId::from_id(id)).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 
         // Remove tracks in batches
         const BATCH_SIZE: usize = 100;
-        
+
         for chunk in track_ids.chunks(BATCH_SIZE) {
-            let playable_ids: Vec<PlayableId> = chunk.iter().map(|t| PlayableId::Track(t.clone())).collect();
+            let playable_ids: Vec<PlayableId> =
+                chunk.iter().map(|t| PlayableId::Track(t.clone())).collect();
             spotify
-                .playlist_remove_all_occurrences_of_items(
-                    playlist_id.clone(), 
-                    playable_ids,
-                    None
-                )
+                .playlist_remove_all_occurrences_of_items(playlist_id.clone(), playable_ids, None)
                 .await
                 .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
         }
@@ -280,8 +305,11 @@ impl SpotifyPlaylistService {
         description: Option<&str>,
         public: bool,
     ) -> SpotifyResult<FullPlaylist> {
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
-        
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
+
         // Get current user to create playlist for
         let current_user = spotify
             .current_user()
@@ -289,13 +317,7 @@ impl SpotifyPlaylistService {
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
         let playlist = spotify
-            .user_playlist_create(
-                current_user.id,
-                name,
-                Some(public),
-                None,
-                description,
-            )
+            .user_playlist_create(current_user.id, name, Some(public), None, description)
             .await
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
@@ -311,7 +333,10 @@ impl SpotifyPlaylistService {
         description: Option<&str>,
         public: Option<bool>,
     ) -> SpotifyResult<()> {
-        let spotify = self.client.get_authenticated_client_with_refresh(user_id).await?;
+        let spotify = self
+            .client
+            .get_authenticated_client_with_refresh(user_id)
+            .await?;
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
@@ -331,7 +356,11 @@ impl SpotifyPlaylistService {
     }
 
     /// Sync playlist to database for local storage and caching
-    pub async fn sync_playlist_to_database(&self, user_id: i64, playlist_id: &str) -> SpotifyResult<()> {
+    pub async fn sync_playlist_to_database(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+    ) -> SpotifyResult<()> {
         let playlist = self.get_playlist(user_id, playlist_id).await?;
         let tracks = self.get_playlist_tracks(user_id, playlist_id).await?;
 
@@ -385,7 +414,7 @@ impl SpotifyPlaylistService {
                     let track_id_opt = full_track.id.as_ref().map(|id| id.id());
                     let artist_name_opt = full_track.artists.first().map(|a| a.name.as_str());
                     let duration_ms = full_track.duration.num_milliseconds() as i64;
-                    
+
                     sqlx::query!(
                         r#"
                         INSERT OR REPLACE INTO songs 
@@ -438,7 +467,10 @@ impl SpotifyPlaylistService {
     }
 
     /// Get playlist from database
-    pub async fn get_playlist_from_database(&self, playlist_id: &str) -> SpotifyResult<Option<Playlist>> {
+    pub async fn get_playlist_from_database(
+        &self,
+        playlist_id: &str,
+    ) -> SpotifyResult<Option<Playlist>> {
         let record = sqlx::query!(
             r#"
             SELECT id, service, external_id, name, description, total_tracks, is_public, owner_id, created_at, updated_at
@@ -476,12 +508,12 @@ impl SpotifyPlaylistService {
     /// Clear cache for specific user
     pub async fn clear_user_cache(&self, user_id: i64) {
         let user_prefix = format!("{}:", user_id);
-        
+
         {
             let mut cache = self.playlist_cache.lock().await;
             cache.retain(|key, _| !key.starts_with(&user_prefix));
         }
-        
+
         {
             let mut cache = self.track_cache.lock().await;
             cache.retain(|key, _| !key.starts_with(&user_prefix));
@@ -582,7 +614,7 @@ mod tests {
         let service = SpotifyPlaylistService::new(
             "test_client_id".to_string(),
             "http://localhost:3000/callback".to_string(),
-            db
+            db,
         );
 
         assert_eq!(service.cache_duration_seconds, 300);
@@ -597,7 +629,7 @@ mod tests {
         let service = SpotifyPlaylistService::new(
             "test_client_id".to_string(),
             "http://localhost:3000/callback".to_string(),
-            db
+            db,
         )
         .with_cache_duration(600);
 
@@ -610,12 +642,12 @@ mod tests {
         let service = SpotifyPlaylistService::new(
             "test_client_id".to_string(),
             "http://localhost:3000/callback".to_string(),
-            db
+            db,
         );
 
         // Clear all caches (should not panic even when empty)
         service.clear_cache().await;
-        
+
         // Clear user cache (should not panic even when empty)
         service.clear_user_cache(123).await;
 
@@ -630,11 +662,13 @@ mod tests {
         let service = SpotifyPlaylistService::new(
             "test_client_id".to_string(),
             "http://localhost:3000/callback".to_string(),
-            db
+            db,
         );
 
         // Test getting non-existent playlist
-        let result = service.get_playlist_from_database("non_existent_playlist").await;
+        let result = service
+            .get_playlist_from_database("non_existent_playlist")
+            .await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }

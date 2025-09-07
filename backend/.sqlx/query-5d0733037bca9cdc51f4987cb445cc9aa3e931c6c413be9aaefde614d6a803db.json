@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, \n                   is_active, sync_frequency, last_sync_at, created_at, updated_at\n            FROM watchers \n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_service",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_playlist_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_service",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_playlist_id",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "sync_frequency",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_sync_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 10,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 11,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "5d0733037bca9cdc51f4987cb445cc9aa3e931c6c413be9aaefde614d6a803db"
+}

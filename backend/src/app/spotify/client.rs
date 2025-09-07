@@ -1,10 +1,10 @@
-use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use rspotify::prelude::*;
+use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
-use super::types::{SpotifyError, SpotifyResult};
 use super::auth::SpotifyAuthService;
+use super::types::{SpotifyError, SpotifyResult};
 
 /// High-level Spotify client for API interactions
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ impl SpotifyClient {
     /// Create a new Spotify client
     pub fn new(client_id: String, redirect_uri: String, db: SqlitePool) -> Self {
         let auth_service = SpotifyAuthService::new(client_id.clone(), redirect_uri.clone(), db);
-        
+
         Self {
             auth_service,
             client_id,
@@ -27,7 +27,10 @@ impl SpotifyClient {
     }
 
     /// Get an authenticated Spotify client for a user
-    pub async fn get_authenticated_client(&self, user_id: i64) -> SpotifyResult<AuthCodePkceSpotify> {
+    pub async fn get_authenticated_client(
+        &self,
+        user_id: i64,
+    ) -> SpotifyResult<AuthCodePkceSpotify> {
         // Get access token
         let access_token = self.auth_service.get_access_token(user_id).await?;
 
@@ -46,7 +49,7 @@ impl SpotifyClient {
             ..Default::default()
         };
 
-        let mut spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
+        let spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
 
         // Set the access token
         let token = Token {
@@ -68,7 +71,10 @@ impl SpotifyClient {
     }
 
     /// Refresh tokens if needed and get authenticated client
-    pub async fn get_authenticated_client_with_refresh(&self, user_id: i64) -> SpotifyResult<AuthCodePkceSpotify> {
+    pub async fn get_authenticated_client_with_refresh(
+        &self,
+        user_id: i64,
+    ) -> SpotifyResult<AuthCodePkceSpotify> {
         // Check if tokens are valid
         if !self.auth_service.has_valid_credentials(user_id).await? {
             // Try to refresh tokens
@@ -82,147 +88,193 @@ impl SpotifyClient {
     /// Test connection by fetching current user profile
     pub async fn test_connection(&self, user_id: i64) -> SpotifyResult<bool> {
         match self.get_authenticated_client_with_refresh(user_id).await {
-            Ok(spotify) => {
-                match spotify.current_user().await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
+            Ok(spotify) => match spotify.current_user().await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
             Err(_) => Ok(false),
         }
     }
 
     /// Get the current user's profile
-    pub async fn get_current_user(&self, user_id: i64) -> SpotifyResult<rspotify::model::PrivateUser> {
+    pub async fn get_current_user(
+        &self,
+        user_id: i64,
+    ) -> SpotifyResult<rspotify::model::PrivateUser> {
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
-        spotify.current_user()
+        spotify
+            .current_user()
             .await
             .map_err(|e| SpotifyError::ApiError(format!("Failed to fetch user profile: {}", e)))
     }
 
     /// Get user's playlists
-    pub async fn get_user_playlists(&self, user_id: i64, limit: Option<u32>, offset: Option<u32>) 
-        -> SpotifyResult<rspotify::model::Page<rspotify::model::SimplifiedPlaylist>> {
+    pub async fn get_user_playlists(
+        &self,
+        user_id: i64,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> SpotifyResult<rspotify::model::Page<rspotify::model::SimplifiedPlaylist>> {
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
         let limit = limit.unwrap_or(50).min(50); // Spotify API limit
         let offset = offset.unwrap_or(0);
-        
-        spotify.current_user_playlists_manual(Some(limit), Some(offset))
+
+        spotify
+            .current_user_playlists_manual(Some(limit), Some(offset))
             .await
             .map_err(|e| SpotifyError::ApiError(format!("Failed to fetch playlists: {}", e)))
     }
 
     /// Get playlist tracks
-    pub async fn get_playlist_tracks(&self, user_id: i64, playlist_id: &str, limit: Option<u32>, offset: Option<u32>) 
-        -> SpotifyResult<rspotify::model::Page<rspotify::model::PlaylistItem>> {
+    pub async fn get_playlist_tracks(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> SpotifyResult<rspotify::model::Page<rspotify::model::PlaylistItem>> {
         use rspotify::model::PlaylistId;
-        
+
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
         let limit = limit.unwrap_or(100).min(100); // Spotify API limit
         let offset = offset.unwrap_or(0);
-        
+
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid playlist ID: {}", e)))?;
-        
-        spotify.playlist_items_manual(playlist_id, None, None, Some(limit), Some(offset))
+
+        spotify
+            .playlist_items_manual(playlist_id, None, None, Some(limit), Some(offset))
             .await
             .map_err(|e| SpotifyError::ApiError(format!("Failed to fetch playlist tracks: {}", e)))
     }
 
     /// Add tracks to a playlist
-    pub async fn add_tracks_to_playlist(&self, user_id: i64, playlist_id: &str, track_uris: Vec<String>) -> SpotifyResult<()> {
+    pub async fn add_tracks_to_playlist(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+        track_uris: Vec<String>,
+    ) -> SpotifyResult<()> {
         use rspotify::model::{PlaylistId, TrackId};
-        
+
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
-        
+
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid playlist ID: {}", e)))?;
-        
+
         // Convert string URIs to TrackIds
-        let track_ids: Result<Vec<_>, _> = track_uris.iter()
+        let track_ids: Result<Vec<_>, _> = track_uris
+            .iter()
             .map(|uri| TrackId::from_uri(uri))
             .collect();
-        
+
         let track_ids = track_ids
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid track URI: {}", e)))?;
-        
+
         // Spotify API allows max 100 tracks per request
         use rspotify::model::PlayableId;
         for chunk in track_ids.chunks(100) {
-            let playable_ids: Vec<PlayableId> = chunk.iter().map(|id| PlayableId::Track(id.clone())).collect();
-            spotify.playlist_add_items(playlist_id.clone(), playable_ids, None)
+            let playable_ids: Vec<PlayableId> = chunk
+                .iter()
+                .map(|id| PlayableId::Track(id.clone()))
+                .collect();
+            spotify
+                .playlist_add_items(playlist_id.clone(), playable_ids, None)
                 .await
-                .map_err(|e| SpotifyError::ApiError(format!("Failed to add tracks to playlist: {}", e)))?;
+                .map_err(|e| {
+                    SpotifyError::ApiError(format!("Failed to add tracks to playlist: {}", e))
+                })?;
         }
-        
+
         Ok(())
     }
 
     /// Remove tracks from a playlist
-    pub async fn remove_tracks_from_playlist(&self, user_id: i64, playlist_id: &str, track_uris: Vec<String>) -> SpotifyResult<()> {
+    pub async fn remove_tracks_from_playlist(
+        &self,
+        user_id: i64,
+        playlist_id: &str,
+        track_uris: Vec<String>,
+    ) -> SpotifyResult<()> {
         use rspotify::model::{PlaylistId, TrackId};
-        
+
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
-        
+
         let playlist_id = PlaylistId::from_id(playlist_id)
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid playlist ID: {}", e)))?;
-        
+
         // Convert string URIs to TrackIds
-        let track_ids: Result<Vec<_>, _> = track_uris.iter()
+        let track_ids: Result<Vec<_>, _> = track_uris
+            .iter()
             .map(|uri| TrackId::from_uri(uri))
             .collect();
-        
+
         let track_ids = track_ids
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid track URI: {}", e)))?;
-        
+
         // Spotify API allows max 100 tracks per request
         use rspotify::model::PlayableId;
         for chunk in track_ids.chunks(100) {
-            let playable_ids: Vec<PlayableId> = chunk.iter().map(|id| PlayableId::Track(id.clone())).collect();
-            spotify.playlist_remove_all_occurrences_of_items(
-                playlist_id.clone(), 
-                playable_ids, 
-                None
-            )
-            .await
-            .map_err(|e| SpotifyError::ApiError(format!("Failed to remove tracks from playlist: {}", e)))?;
+            let playable_ids: Vec<PlayableId> = chunk
+                .iter()
+                .map(|id| PlayableId::Track(id.clone()))
+                .collect();
+            spotify
+                .playlist_remove_all_occurrences_of_items(playlist_id.clone(), playable_ids, None)
+                .await
+                .map_err(|e| {
+                    SpotifyError::ApiError(format!("Failed to remove tracks from playlist: {}", e))
+                })?;
         }
-        
+
         Ok(())
     }
 
     /// Search for tracks
-    pub async fn search_tracks(&self, user_id: i64, query: &str, limit: Option<u32>) 
-        -> SpotifyResult<rspotify::model::Page<rspotify::model::FullTrack>> {
+    pub async fn search_tracks(
+        &self,
+        user_id: i64,
+        query: &str,
+        limit: Option<u32>,
+    ) -> SpotifyResult<rspotify::model::Page<rspotify::model::FullTrack>> {
         use rspotify::model::SearchType;
-        
+
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
         let limit = limit.unwrap_or(20).min(50); // Spotify API limit
-        
-        let search_result = spotify.search(query, SearchType::Track, None, None, Some(limit), Some(0))
+
+        let search_result = spotify
+            .search(query, SearchType::Track, None, None, Some(limit), Some(0))
             .await
             .map_err(|e| SpotifyError::ApiError(format!("Failed to search tracks: {}", e)))?;
-        
+
         match search_result {
             rspotify::model::SearchResult::Tracks(page) => Ok(page),
-            _ => Err(SpotifyError::ApiError("Unexpected search result format".to_string())),
+            _ => Err(SpotifyError::ApiError(
+                "Unexpected search result format".to_string(),
+            )),
         }
     }
 
     /// Create a new playlist
-    pub async fn create_playlist(&self, user_id: i64, name: &str, description: Option<&str>, public: bool) 
-        -> SpotifyResult<rspotify::model::FullPlaylist> {
+    pub async fn create_playlist(
+        &self,
+        user_id: i64,
+        name: &str,
+        description: Option<&str>,
+        public: bool,
+    ) -> SpotifyResult<rspotify::model::FullPlaylist> {
         let spotify = self.get_authenticated_client_with_refresh(user_id).await?;
-        
+
         // Get current user ID
         let user = self.get_current_user(user_id).await?;
         let user_id_str = user.id.id();
-        
+
         use rspotify::model::UserId;
         let user_id_obj = UserId::from_id(user_id_str)
             .map_err(|e| SpotifyError::InvalidInput(format!("Invalid user ID: {}", e)))?;
-        
-        spotify.user_playlist_create(user_id_obj, name, Some(public), Some(false), description)
+
+        spotify
+            .user_playlist_create(user_id_obj, name, Some(public), Some(false), description)
             .await
             .map_err(|e| SpotifyError::ApiError(format!("Failed to create playlist: {}", e)))
     }
@@ -308,16 +360,11 @@ mod tests {
         // Insert valid credential
         let now = OffsetDateTime::now_utc();
         let expires_at = now + time::Duration::hours(1);
-        
-        sqlx::query(
-            "INSERT INTO user_credentials (user_id, service, access_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+
+        sqlx::query!(
+            "INSERT INTO user_credentials (user_id, service, access_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            1, "spotify", "test_token", expires_at, now, now
         )
-        .bind(1)
-        .bind("spotify")
-        .bind("test_token")
-        .bind(expires_at)
-        .bind(now)
-        .bind(now)
         .execute(&pool)
         .await
         .unwrap();
@@ -338,16 +385,11 @@ mod tests {
         // Insert expired credential
         let now = OffsetDateTime::now_utc();
         let expires_at = now - time::Duration::hours(1); // Expired
-        
-        sqlx::query(
-            "INSERT INTO user_credentials (user_id, service, access_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+
+        sqlx::query!(
+            "INSERT INTO user_credentials (user_id, service, access_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            1, "spotify", "test_token", expires_at, now, now
         )
-        .bind(1)
-        .bind("spotify")
-        .bind("test_token")
-        .bind(expires_at)
-        .bind(now)
-        .bind(now)
         .execute(&pool)
         .await
         .unwrap();
