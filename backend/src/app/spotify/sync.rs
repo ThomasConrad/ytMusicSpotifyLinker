@@ -137,7 +137,7 @@ impl SpotifySyncService {
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
         let mut songs_added = 0;
-        let mut songs_failed = 0;
+        let mut _songs_failed = 0;
         let mut error_message = None;
 
         // Get user ID from watcher (assuming it's stored or can be derived)
@@ -336,11 +336,14 @@ impl SpotifySyncService {
 #[derive(Debug, Clone)]
 struct TargetTrackInfo {
     external_id: String,
+    #[allow(dead_code)]
     url: String,
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
 

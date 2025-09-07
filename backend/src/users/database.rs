@@ -159,11 +159,14 @@ impl DatabaseOperations for Database {
         })
         .await??;
 
-        let user = sqlx::query_as!(User,
+        let user = sqlx::query_as!(
+            User,
             "INSERT INTO users (username, password) VALUES (?, ?) RETURNING *",
-            username, password_hash)
-            .fetch_one(&self.pool)
-            .await?;
+            username,
+            password_hash
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(user)
     }
@@ -221,7 +224,7 @@ mod tests {
             .expect("Failed to create test database");
 
         // Create the users table
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,

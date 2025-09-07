@@ -3,9 +3,9 @@ use sqlx::SqlitePool;
 use thiserror::Error;
 
 use crate::users::{
-    database::{Database, Backend, Credentials, DatabaseOperations, Error as DbError},
-    models::{User, UserCredential, Watcher, SyncOperation, CreateWatcherRequest},
-    repository_simple::{WatcherRepository, SyncRepository},
+    database::{Backend, Credentials, Database, DatabaseOperations, Error as DbError},
+    models::{CreateWatcherRequest, SyncOperation, User, UserCredential, Watcher},
+    repository_simple::{SyncRepository, WatcherRepository},
 };
 
 #[derive(Error, Debug)]
@@ -43,18 +43,26 @@ impl AuthService {
     pub fn new(pool: SqlitePool) -> Self {
         let db = Database::new(pool);
         let backend = Backend::new(db.clone());
-        
+
         Self { backend, db }
     }
 
-    pub async fn register_user(&self, username: String, password: String) -> Result<User, ServiceError> {
+    pub async fn register_user(
+        &self,
+        username: String,
+        password: String,
+    ) -> Result<User, ServiceError> {
         // Validate input
         if username.trim().is_empty() {
-            return Err(ServiceError::ValidationError("Username cannot be empty".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Username cannot be empty".to_string(),
+            ));
         }
-        
+
         if password.len() < 8 {
-            return Err(ServiceError::ValidationError("Password must be at least 8 characters".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Password must be at least 8 characters".to_string(),
+            ));
         }
 
         // Check if user already exists
@@ -77,19 +85,21 @@ impl AuthService {
                     username: user.username,
                     password, // We need to include password field for models::User
                 })
-            },
-            Ok(None) => {
-                Err(ServiceError::AuthError("Failed to create user".to_string()))
-            },
-            Err(e) => {
-                Err(ServiceError::DbError(e))
             }
+            Ok(None) => Err(ServiceError::AuthError("Failed to create user".to_string())),
+            Err(e) => Err(ServiceError::DbError(e)),
         }
     }
 
-    pub async fn login_user(&self, username: String, password: String) -> Result<User, ServiceError> {
+    pub async fn login_user(
+        &self,
+        username: String,
+        password: String,
+    ) -> Result<User, ServiceError> {
         if username.trim().is_empty() || password.is_empty() {
-            return Err(ServiceError::ValidationError("Username and password are required".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Username and password are required".to_string(),
+            ));
         }
 
         let credentials = Credentials {
@@ -106,13 +116,9 @@ impl AuthService {
                     username: user.username,
                     password, // We need to include password field for models::User
                 })
-            },
-            Ok(None) => {
-                Err(ServiceError::InvalidCredentials)
-            },
-            Err(e) => {
-                Err(ServiceError::DbError(e))
             }
+            Ok(None) => Err(ServiceError::InvalidCredentials),
+            Err(e) => Err(ServiceError::DbError(e)),
         }
     }
 
@@ -142,6 +148,7 @@ impl AuthService {
 pub struct UserService {
     pool: SqlitePool,
     watcher_repo: WatcherRepository,
+    #[allow(dead_code)]
     sync_repo: SyncRepository,
 }
 
@@ -149,7 +156,7 @@ impl UserService {
     pub fn new(pool: SqlitePool) -> Self {
         let watcher_repo = WatcherRepository::new(pool.clone());
         let sync_repo = SyncRepository::new(pool.clone());
-        
+
         Self {
             pool,
             watcher_repo,
@@ -157,9 +164,15 @@ impl UserService {
         }
     }
 
-    pub async fn update_profile(&self, user_id: i64, new_username: String) -> Result<(), ServiceError> {
+    pub async fn update_profile(
+        &self,
+        user_id: i64,
+        new_username: String,
+    ) -> Result<(), ServiceError> {
         if new_username.trim().is_empty() {
-            return Err(ServiceError::ValidationError("Username cannot be empty".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Username cannot be empty".to_string(),
+            ));
         }
 
         // Check if new username is already taken by another user
@@ -169,17 +182,24 @@ impl UserService {
             }
         }
 
-        sqlx::query!("UPDATE users SET username = ? WHERE id = ?", new_username, user_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query!(
+            "UPDATE users SET username = ? WHERE id = ?",
+            new_username,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, ServiceError> {
-        let row = sqlx::query!("SELECT id, username FROM users WHERE username = ?", username)
-            .fetch_optional(&self.pool)
-            .await?;
+        let row = sqlx::query!(
+            "SELECT id, username FROM users WHERE username = ?",
+            username
+        )
+        .fetch_optional(&self.pool)
+        .await?;
 
         if let Some(row) = row {
             Ok(Some(User {
@@ -192,8 +212,12 @@ impl UserService {
         }
     }
 
-    pub async fn get_user_service_connections(&self, user_id: i64) -> Result<Vec<UserCredential>, ServiceError> {
-        let rows = sqlx::query_as!(UserCredential,
+    pub async fn get_user_service_connections(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<UserCredential>, ServiceError> {
+        let rows = sqlx::query_as!(
+            UserCredential,
             "SELECT * FROM user_credentials WHERE user_id = ?",
             user_id
         )
@@ -203,15 +227,26 @@ impl UserService {
         Ok(rows)
     }
 
-    pub async fn delete_service_connection(&self, user_id: i64, service: &str) -> Result<(), ServiceError> {
+    pub async fn delete_service_connection(
+        &self,
+        user_id: i64,
+        service: &str,
+    ) -> Result<(), ServiceError> {
         // Validate service name
         if !["youtube_music", "spotify"].contains(&service) {
-            return Err(ServiceError::ValidationError(format!("Unsupported service: {}", service)));
+            return Err(ServiceError::ValidationError(format!(
+                "Unsupported service: {}",
+                service
+            )));
         }
 
-        let result = sqlx::query!("DELETE FROM user_credentials WHERE user_id = ? AND service = ?", user_id, service)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query!(
+            "DELETE FROM user_credentials WHERE user_id = ? AND service = ?",
+            user_id,
+            service
+        )
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err(ServiceError::ServiceConnectionNotFound);
@@ -220,18 +255,30 @@ impl UserService {
         Ok(())
     }
 
-    pub async fn create_watcher(&self, user_id: i64, request: CreateWatcherRequest) -> Result<Watcher, ServiceError> {
+    pub async fn create_watcher(
+        &self,
+        user_id: i64,
+        request: CreateWatcherRequest,
+    ) -> Result<Watcher, ServiceError> {
         // Validate request
         if request.name.trim().is_empty() {
-            return Err(ServiceError::ValidationError("Watcher name cannot be empty".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Watcher name cannot be empty".to_string(),
+            ));
         }
 
         if request.source_service == request.target_service {
-            return Err(ServiceError::ValidationError("Source and target services cannot be the same".to_string()));
+            return Err(ServiceError::ValidationError(
+                "Source and target services cannot be the same".to_string(),
+            ));
         }
 
         // Check if watcher name already exists for this user
-        if let Some(_) = self.watcher_repo.get_watcher_by_name(user_id, &request.name).await? {
+        if (self
+            .watcher_repo
+            .get_watcher_by_name(user_id, &request.name)
+            .await?).is_some()
+        {
             return Err(ServiceError::WatcherNameExists);
         }
 
@@ -243,25 +290,50 @@ impl UserService {
         Ok(self.watcher_repo.get_watchers_by_user(user_id).await?)
     }
 
-    pub async fn get_watcher_by_id_and_user(&self, watcher_id: i64, user_id: i64) -> Result<Option<Watcher>, ServiceError> {
+    pub async fn get_watcher_by_id_and_user(
+        &self,
+        watcher_id: i64,
+        user_id: i64,
+    ) -> Result<Option<Watcher>, ServiceError> {
         // Get all user watchers and find the one with matching ID
         let watchers = self.get_user_watchers(user_id).await?;
         Ok(watchers.into_iter().find(|w| w.id == watcher_id))
     }
 
-    pub async fn update_watcher_status(&self, watcher_id: i64, user_id: i64, is_active: bool) -> Result<(), ServiceError> {
+    pub async fn update_watcher_status(
+        &self,
+        watcher_id: i64,
+        user_id: i64,
+        is_active: bool,
+    ) -> Result<(), ServiceError> {
         // Verify the watcher belongs to the user
-        if self.get_watcher_by_id_and_user(watcher_id, user_id).await?.is_none() {
+        if self
+            .get_watcher_by_id_and_user(watcher_id, user_id)
+            .await?
+            .is_none()
+        {
             return Err(ServiceError::WatcherNotFound);
         }
 
-        self.watcher_repo.update_watcher_status(watcher_id, is_active).await?;
+        self.watcher_repo
+            .update_watcher_status(watcher_id, is_active)
+            .await?;
         Ok(())
     }
 
-    pub async fn get_watcher_sync_history(&self, watcher_id: i64, user_id: i64, limit: Option<i32>, offset: Option<i32>) -> Result<Vec<SyncOperation>, ServiceError> {
+    pub async fn get_watcher_sync_history(
+        &self,
+        watcher_id: i64,
+        user_id: i64,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> Result<Vec<SyncOperation>, ServiceError> {
         // Verify the watcher belongs to the user
-        if self.get_watcher_by_id_and_user(watcher_id, user_id).await?.is_none() {
+        if self
+            .get_watcher_by_id_and_user(watcher_id, user_id)
+            .await?
+            .is_none()
+        {
             return Err(ServiceError::WatcherNotFound);
         }
 
@@ -277,7 +349,9 @@ impl UserService {
             ORDER BY started_at DESC
             LIMIT ? OFFSET ?
             "#,
-            watcher_id, limit, offset
+            watcher_id,
+            limit,
+            offset
         )
         .fetch_all(&self.pool)
         .await?;
@@ -293,7 +367,9 @@ impl UserService {
                 songs_removed: row.songs_removed.unwrap_or(0) as i32,
                 songs_failed: row.songs_failed.unwrap_or(0) as i32,
                 error_message: row.error_message,
-                started_at: row.started_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                started_at: row
+                    .started_at
+                    .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
                 completed_at: row.completed_at,
             });
         }
@@ -319,7 +395,7 @@ impl UserService {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         let recent_syncs = recent_syncs_row.count as i32;
 
         // Get service connections
@@ -357,7 +433,7 @@ mod tests {
             .expect("Failed to create test database");
 
         // Create tables
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
@@ -369,7 +445,7 @@ mod tests {
         .await
         .expect("Failed to create users table");
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE user_credentials (
                 id INTEGER PRIMARY KEY,
@@ -389,7 +465,7 @@ mod tests {
         .await
         .expect("Failed to create user_credentials table");
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE watchers (
                 id INTEGER PRIMARY KEY,
@@ -413,7 +489,7 @@ mod tests {
         .await
         .expect("Failed to create watchers table");
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE sync_operations (
                 id INTEGER PRIMARY KEY,
@@ -453,7 +529,11 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify update
-        let user = service.get_user_by_username("newusername").await.unwrap().unwrap();
+        let user = service
+            .get_user_by_username("newusername")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(user.username, "newusername");
     }
 

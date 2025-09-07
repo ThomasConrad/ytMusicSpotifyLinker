@@ -17,6 +17,7 @@ use crate::users::models::Playlist;
 struct PlaylistCacheEntry {
     playlist: FullPlaylist,
     cached_at: OffsetDateTime,
+    #[allow(dead_code)]
     tracks_cached: bool,
 }
 
@@ -225,7 +226,7 @@ impl SpotifyPlaylistService {
 
         // Convert track IDs
         let track_ids: Result<Vec<TrackId>, _> =
-            track_ids.iter().map(|id| TrackId::from_id(id)).collect();
+            track_ids.iter().map(TrackId::from_id).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 
@@ -271,7 +272,7 @@ impl SpotifyPlaylistService {
 
         // Convert track IDs
         let track_ids: Result<Vec<TrackId>, _> =
-            track_ids.iter().map(|id| TrackId::from_id(id)).collect();
+            track_ids.iter().map(TrackId::from_id).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 

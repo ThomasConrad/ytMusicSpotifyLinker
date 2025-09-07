@@ -186,7 +186,7 @@ mod get {
 
         match repo.get_watcher_by_name(user.id, &watchername).await {
             Ok(Some(watcher)) => {
-                if let Err(_) = repo.update_watcher_status(watcher.id, true).await {
+                if (repo.update_watcher_status(watcher.id, true).await).is_err() {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
                 Ok(Json(serde_json::json!({
@@ -209,7 +209,7 @@ mod get {
 
         match repo.get_watcher_by_name(user.id, &watchername).await {
             Ok(Some(watcher)) => {
-                if let Err(_) = repo.update_watcher_status(watcher.id, false).await {
+                if (repo.update_watcher_status(watcher.id, false).await).is_err() {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
                 Ok(Json(serde_json::json!({
@@ -423,7 +423,7 @@ async fn get_enhanced_watchers(
             sync_success_rate,
             created_at: row
                 .created_at
-                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                .unwrap_or_else(time::OffsetDateTime::now_utc),
             source_playlist_id: row.source_playlist_id,
             target_playlist_id: row.target_playlist_id,
             sync_frequency: row.sync_frequency as i32,
@@ -533,7 +533,7 @@ async fn get_watcher_sync_history(
             error_message: row.error_message,
             started_at: row
                 .started_at
-                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                .unwrap_or_else(time::OffsetDateTime::now_utc),
             completed_at: row.completed_at,
         })
         .collect();
@@ -583,7 +583,7 @@ async fn get_recent_sync_operations(
             error_message: row.error_message,
             started_at: row
                 .started_at
-                .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                .unwrap_or_else(time::OffsetDateTime::now_utc),
             completed_at: row.completed_at,
         })
         .collect())

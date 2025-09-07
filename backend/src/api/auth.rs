@@ -169,7 +169,7 @@ mod json {
         match state.db.create_user(&creds.username, &creds.password).await {
             Ok(user) => {
                 // Auto-login the new user
-                if let Err(_) = auth_session.login(&user).await {
+                if (auth_session.login(&user).await).is_err() {
                     return Ok(Json(JsonErrorResponse {
                         success: false,
                         error: "User created but failed to log in".to_string(),

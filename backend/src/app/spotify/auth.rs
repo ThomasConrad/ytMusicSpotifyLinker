@@ -288,7 +288,7 @@ impl SpotifyAuthService {
         )
         .execute(&self.db)
         .await
-        .map_err(|e| SpotifyError::DatabaseError(e))?;
+        .map_err(SpotifyError::DatabaseError)?;
 
         Ok(())
     }
@@ -361,7 +361,7 @@ impl SpotifyAuthService {
         )
         .fetch_one(&self.db)
         .await
-        .map_err(|e| SpotifyError::DatabaseError(e))?;
+        .map_err(SpotifyError::DatabaseError)?;
 
         Ok(credential)
     }
@@ -392,7 +392,7 @@ impl SpotifyAuthService {
         )
         .execute(&self.db)
         .await
-        .map_err(|e| SpotifyError::DatabaseError(e))?;
+        .map_err(SpotifyError::DatabaseError)?;
 
         Ok(())
     }
@@ -411,7 +411,7 @@ impl SpotifyAuthService {
         )
         .fetch_optional(&self.db)
         .await
-        .map_err(|e| SpotifyError::DatabaseError(e))?;
+        .map_err(SpotifyError::DatabaseError)?;
 
         Ok(credential)
     }
