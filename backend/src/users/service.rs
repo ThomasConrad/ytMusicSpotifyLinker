@@ -369,7 +369,7 @@ impl UserService {
                 error_message: row.error_message,
                 started_at: row
                     .started_at
-                    .unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                    .unwrap_or_else(time::OffsetDateTime::now_utc),
                 completed_at: row.completed_at,
             });
         }

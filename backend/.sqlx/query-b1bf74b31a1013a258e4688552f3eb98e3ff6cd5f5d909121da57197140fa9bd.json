@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT completed_at\n            FROM sync_operations so\n            INNER JOIN watchers w ON so.watcher_id = w.id\n            WHERE w.user_id = ? AND so.status = 'completed' AND completed_at IS NOT NULL\n            ORDER BY completed_at DESC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "completed_at",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "b1bf74b31a1013a258e4688552f3eb98e3ff6cd5f5d909121da57197140fa9bd"
+}

@@ -39,7 +39,7 @@ CREATE TABLE playlists (
     external_id TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    total_tracks INTEGER DEFAULT 0,
+    total_tracks INTEGER DEFAULT 0 NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     owner_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -80,9 +80,9 @@ CREATE TABLE sync_operations (
     watcher_id INTEGER NOT NULL,
     operation_type TEXT NOT NULL, -- 'full_sync', 'incremental', 'preview'
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed'
-    songs_added INTEGER DEFAULT 0,
-    songs_removed INTEGER DEFAULT 0,
-    songs_failed INTEGER DEFAULT 0,
+    songs_added INTEGER DEFAULT 0 NOT NULL,
+    songs_removed INTEGER DEFAULT 0 NOT NULL,
+    songs_failed INTEGER DEFAULT 0 NOT NULL,
     error_message TEXT,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,

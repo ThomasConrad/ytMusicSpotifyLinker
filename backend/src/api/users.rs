@@ -115,8 +115,8 @@ mod get {
                 COUNT(*) as total_sync_operations,
                 COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_syncs,
                 COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_syncs,
-                COALESCE(SUM(songs_added), 0) as total_songs_added,
-                COALESCE(SUM(songs_removed), 0) as total_songs_removed,
+                SUM(songs_added) as "total_songs_added!: i64",
+                SUM(songs_removed) as "total_songs_removed!: i64",
                 MAX(started_at) as "last_sync_time: Option<OffsetDateTime>"
             FROM sync_operations so
             JOIN watchers w ON so.watcher_id = w.id

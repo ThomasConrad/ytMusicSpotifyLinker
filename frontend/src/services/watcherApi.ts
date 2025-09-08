@@ -9,7 +9,7 @@ import {
 } from '@/types';
 
 export class WatcherApiService {
-  private basePath = '/protected/watchers';
+  private basePath = '/watchers';
 
   /**
    * Get all watchers for the current user

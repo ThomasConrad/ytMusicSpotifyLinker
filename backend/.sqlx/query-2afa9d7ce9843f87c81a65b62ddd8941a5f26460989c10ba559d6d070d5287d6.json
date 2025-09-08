@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                COUNT(*) as \"total_watchers!: i64\",\n                COUNT(CASE WHEN is_active = 1 THEN 1 END) as \"active_watchers!: i64\"\n            FROM watchers \n            WHERE user_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_watchers!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "active_watchers!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "2afa9d7ce9843f87c81a65b62ddd8941a5f26460989c10ba559d6d070d5287d6"
+}

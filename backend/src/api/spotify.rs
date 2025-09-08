@@ -797,7 +797,7 @@ mod tests {
             .expect("Failed to create test database");
 
         // Create tables
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
@@ -809,7 +809,7 @@ mod tests {
         .await
         .expect("Failed to create users table");
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             CREATE TABLE user_credentials (
                 id INTEGER PRIMARY KEY,

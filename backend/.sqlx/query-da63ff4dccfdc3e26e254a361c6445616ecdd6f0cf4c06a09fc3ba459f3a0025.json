@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                COUNT(*) as total_sync_operations,\n                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_syncs,\n                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_syncs,\n                SUM(songs_added) as \"total_songs_added!: i64\",\n                SUM(songs_removed) as \"total_songs_removed!: i64\",\n                MAX(started_at) as \"last_sync_time: Option<OffsetDateTime>\"\n            FROM sync_operations so\n            JOIN watchers w ON so.watcher_id = w.id\n            WHERE w.user_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_sync_operations",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "successful_syncs",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "failed_syncs",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "total_songs_added!: i64",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "total_songs_removed!: i64",
+        "ordinal": 4,
+        "type_info": "Null"
+      },
+      {
+        "name": "last_sync_time: Option<OffsetDateTime>",
+        "ordinal": 5,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "da63ff4dccfdc3e26e254a361c6445616ecdd6f0cf4c06a09fc3ba459f3a0025"
+}

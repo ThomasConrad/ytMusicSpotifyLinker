@@ -39,8 +39,8 @@ impl WatcherRepository {
             is_active: row.is_active.unwrap_or(true),
             sync_frequency: row.sync_frequency.unwrap_or(300) as i32,
             last_sync_at: row.last_sync_at,
-            created_at: row.created_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
-            updated_at: row.updated_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+            created_at: row.created_at.unwrap_or_else(time::OffsetDateTime::now_utc),
+            updated_at: row.updated_at.unwrap_or_else(time::OffsetDateTime::now_utc),
         })
     }
 
@@ -71,8 +71,8 @@ impl WatcherRepository {
                 is_active: row.is_active.unwrap_or(true),
                 sync_frequency: row.sync_frequency.unwrap_or(300) as i32,
                 last_sync_at: row.last_sync_at,
-                created_at: row.created_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
-                updated_at: row.updated_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                created_at: row.created_at.unwrap_or_else(time::OffsetDateTime::now_utc),
+                updated_at: row.updated_at.unwrap_or_else(time::OffsetDateTime::now_utc),
             });
         }
 
@@ -104,8 +104,8 @@ impl WatcherRepository {
                 is_active: row.is_active.unwrap_or(true),
                 sync_frequency: row.sync_frequency.unwrap_or(300) as i32,
                 last_sync_at: row.last_sync_at,
-                created_at: row.created_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
-                updated_at: row.updated_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                created_at: row.created_at.unwrap_or_else(time::OffsetDateTime::now_utc),
+                updated_at: row.updated_at.unwrap_or_else(time::OffsetDateTime::now_utc),
             }))
         } else {
             Ok(None)
@@ -137,8 +137,8 @@ impl WatcherRepository {
                 is_active: row.is_active.unwrap_or(true),
                 sync_frequency: row.sync_frequency.unwrap_or(300) as i32,
                 last_sync_at: row.last_sync_at,
-                created_at: row.created_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
-                updated_at: row.updated_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                created_at: row.created_at.unwrap_or_else(time::OffsetDateTime::now_utc),
+                updated_at: row.updated_at.unwrap_or_else(time::OffsetDateTime::now_utc),
             }))
         } else {
             Ok(None)
@@ -189,8 +189,8 @@ impl WatcherRepository {
                 is_active: row.is_active.unwrap_or(true),
                 sync_frequency: row.sync_frequency.unwrap_or(300) as i32,
                 last_sync_at: row.last_sync_at,
-                created_at: row.created_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
-                updated_at: row.updated_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                created_at: row.created_at.unwrap_or_else(time::OffsetDateTime::now_utc),
+                updated_at: row.updated_at.unwrap_or_else(time::OffsetDateTime::now_utc),
             });
         }
 
@@ -230,7 +230,7 @@ impl SyncRepository {
             songs_removed: row.songs_removed.unwrap_or(0) as i32,
             songs_failed: row.songs_failed.unwrap_or(0) as i32,
             error_message: row.error_message,
-            started_at: row.started_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+            started_at: row.started_at.unwrap_or_else(time::OffsetDateTime::now_utc),
             completed_at: row.completed_at,
         })
     }
@@ -279,7 +279,7 @@ impl SyncRepository {
                 songs_removed: row.songs_removed.unwrap_or(0) as i32,
                 songs_failed: row.songs_failed.unwrap_or(0) as i32,
                 error_message: row.error_message,
-                started_at: row.started_at.unwrap_or_else(|| time::OffsetDateTime::now_utc()),
+                started_at: row.started_at.unwrap_or_else(time::OffsetDateTime::now_utc),
                 completed_at: row.completed_at,
             });
         }

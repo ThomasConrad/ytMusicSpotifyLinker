@@ -137,7 +137,7 @@ impl SpotifySyncService {
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
         let mut songs_added = 0;
-        let mut _songs_failed = 0;
+        let songs_failed ;
         let mut error_message = None;
 
         // Get user ID from watcher (assuming it's stored or can be derived)
