@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::users::{
     database::{Backend, Credentials, Database, DatabaseOperations, Error as DbError},
     models::{CreateWatcherRequest, SyncOperation, User, UserCredential, Watcher},
-    repository_simple::{SyncRepository, WatcherRepository},
+    repository::{SyncRepository, WatcherRepository},
 };
 
 #[derive(Error, Debug)]
@@ -340,7 +340,8 @@ impl UserService {
         let limit = limit.unwrap_or(50).min(200); // Cap at 200
         let offset = offset.unwrap_or(0).max(0);
 
-        let rows = sqlx::query!(
+        let sync_operations = sqlx::query_as!(
+            SyncOperation,
             r#"
             SELECT id, watcher_id, operation_type, status, songs_added, songs_removed, 
                    songs_failed, error_message, started_at, completed_at
@@ -355,24 +356,6 @@ impl UserService {
         )
         .fetch_all(&self.pool)
         .await?;
-
-        let mut sync_operations = Vec::new();
-        for row in rows {
-            sync_operations.push(SyncOperation {
-                id: row.id.unwrap_or(0),
-                watcher_id: row.watcher_id,
-                operation_type: row.operation_type,
-                status: row.status,
-                songs_added: row.songs_added.unwrap_or(0) as i32,
-                songs_removed: row.songs_removed.unwrap_or(0) as i32,
-                songs_failed: row.songs_failed.unwrap_or(0) as i32,
-                error_message: row.error_message,
-                started_at: row
-                    .started_at
-                    .unwrap_or_else(time::OffsetDateTime::now_utc),
-                completed_at: row.completed_at,
-            });
-        }
 
         Ok(sync_operations)
     }

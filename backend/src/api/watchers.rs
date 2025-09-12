@@ -421,9 +421,7 @@ async fn get_enhanced_watchers(
             last_sync_status: Some(row.last_sync_status),
             total_songs: Some(row.total_songs as i32),
             sync_success_rate,
-            created_at: row
-                .created_at
-                .unwrap_or_else(time::OffsetDateTime::now_utc),
+            created_at: row.created_at,
             source_playlist_id: row.source_playlist_id,
             target_playlist_id: row.target_playlist_id,
             sync_frequency: row.sync_frequency as i32,
@@ -524,16 +522,14 @@ async fn get_watcher_sync_history(
     let operations = operations
         .into_iter()
         .map(|row| SyncOperationSummary {
-            id: row.id.unwrap_or(0),
+            id: row.id,
             operation_type: row.operation_type,
             status: row.status,
-            songs_added: row.songs_added.unwrap_or(0) as i32,
-            songs_removed: row.songs_removed.unwrap_or(0) as i32,
-            songs_failed: row.songs_failed.unwrap_or(0) as i32,
+            songs_added: row.songs_added as i32,
+            songs_removed: row.songs_removed as i32,
+            songs_failed: row.songs_failed as i32,
             error_message: row.error_message,
-            started_at: row
-                .started_at
-                .unwrap_or_else(time::OffsetDateTime::now_utc),
+            started_at: row.started_at,
             completed_at: row.completed_at,
         })
         .collect();
@@ -574,16 +570,14 @@ async fn get_recent_sync_operations(
     Ok(operations
         .into_iter()
         .map(|row| SyncOperationSummary {
-            id: row.id.unwrap_or(0),
+            id: row.id,
             operation_type: row.operation_type,
             status: row.status,
-            songs_added: row.songs_added.unwrap_or(0) as i32,
-            songs_removed: row.songs_removed.unwrap_or(0) as i32,
-            songs_failed: row.songs_failed.unwrap_or(0) as i32,
+            songs_added: row.songs_added as i32,
+            songs_removed: row.songs_removed as i32,
+            songs_failed: row.songs_failed as i32,
             error_message: row.error_message,
-            started_at: row
-                .started_at
-                .unwrap_or_else(time::OffsetDateTime::now_utc),
+            started_at: row.started_at,
             completed_at: row.completed_at,
         })
         .collect())

@@ -11,7 +11,7 @@ use crate::users::{
     models::{
         SongFailure, SongResponse, SyncOperation, SyncOperationResponse, SyncPreviewResponse,
     },
-    repository_simple::{SyncRepository, WatcherRepository},
+    repository::{SyncRepository, WatcherRepository},
 };
 
 /// Spotify synchronization service that integrates with the existing sync system

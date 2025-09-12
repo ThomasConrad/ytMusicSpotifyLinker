@@ -655,7 +655,7 @@ async fn sync_execute(
 
     // Validate that the watcher belongs to the authenticated user
     // This is a security check to prevent users from syncing other users' watchers
-    use crate::users::repository_simple::WatcherRepository;
+    use crate::users::repository::WatcherRepository;
     let watcher_repo = WatcherRepository::new(pool.clone());
     
     match watcher_repo.get_watcher_by_id(request.watcher_id).await {
@@ -719,7 +719,7 @@ async fn sync_status(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    use crate::users::repository_simple::SyncRepository;
+    use crate::users::repository::SyncRepository;
     let sync_repo = SyncRepository::new(pool.clone());
 
     // First, we need to get the sync operation by ID to check if it exists
@@ -728,7 +728,7 @@ async fn sync_status(
     
     // Note: In a production system, we should add a get_sync_operation_by_id method
     // For now, we'll search across recent operations to find the one with matching ID
-    use crate::users::repository_simple::WatcherRepository;
+    use crate::users::repository::WatcherRepository;
     let watcher_repo = WatcherRepository::new(pool);
     
     // Get all watchers for this user and search their operations

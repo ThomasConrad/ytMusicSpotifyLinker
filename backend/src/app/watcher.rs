@@ -1,6 +1,6 @@
 use crate::app::songlink::SonglinkClient;
 use crate::app::spotify::{SpotifyPlaylistService, SpotifySyncService};
-use crate::users::repository_simple::{WatcherRepository, SyncRepository};
+use crate::users::repository::{WatcherRepository, SyncRepository};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;

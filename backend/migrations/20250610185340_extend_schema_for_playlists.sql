@@ -8,6 +8,7 @@ CREATE TABLE user_credentials (
     access_token TEXT NOT NULL,
     refresh_token TEXT,
     expires_at DATETIME,
+    token_scope TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -16,59 +17,59 @@ CREATE TABLE user_credentials (
 
 -- Store playlist watchers (sync configurations)
 CREATE TABLE watchers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     source_service TEXT NOT NULL, -- 'youtube_music', 'spotify'
     source_playlist_id TEXT NOT NULL,
     target_service TEXT NOT NULL, -- 'youtube_music', 'spotify'
     target_playlist_id TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    sync_frequency INTEGER DEFAULT 300, -- seconds
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    sync_frequency INT4 DEFAULT 300 NOT NULL, -- seconds
     last_sync_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     UNIQUE(user_id, name)
 );
 
 -- Store playlists from external services
 CREATE TABLE playlists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     service TEXT NOT NULL, -- 'youtube_music', 'spotify'
     external_id TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    total_tracks INTEGER DEFAULT 0 NOT NULL,
-    is_public BOOLEAN DEFAULT FALSE,
+    total_tracks INT4 DEFAULT 0 NOT NULL,
+    is_public BOOLEAN DEFAULT FALSE NOT NULL,
     owner_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(service, external_id)
 );
 
 -- Store individual songs/tracks
 CREATE TABLE songs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     service TEXT NOT NULL, -- 'youtube_music', 'spotify'
     external_id TEXT NOT NULL,
     title TEXT NOT NULL,
     artist TEXT,
     album TEXT,
-    duration_ms INTEGER,
+    duration_ms INT4,
     songlink_data TEXT, -- JSON from Songlink API
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(service, external_id)
 );
 
 -- Junction table for playlist-song relationships
 CREATE TABLE playlist_songs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     playlist_id INTEGER NOT NULL,
     song_id INTEGER NOT NULL,
-    position INTEGER NOT NULL,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    position INT4 NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE,
     FOREIGN KEY (song_id) REFERENCES songs (id) ON DELETE CASCADE,
     UNIQUE(playlist_id, song_id, position)
@@ -76,28 +77,28 @@ CREATE TABLE playlist_songs (
 
 -- Store sync operations and their results
 CREATE TABLE sync_operations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     watcher_id INTEGER NOT NULL,
     operation_type TEXT NOT NULL, -- 'full_sync', 'incremental', 'preview'
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed'
-    songs_added INTEGER DEFAULT 0 NOT NULL,
-    songs_removed INTEGER DEFAULT 0 NOT NULL,
-    songs_failed INTEGER DEFAULT 0 NOT NULL,
+    songs_added INT4 DEFAULT 0 NOT NULL,
+    songs_removed INT4 DEFAULT 0 NOT NULL,
+    songs_failed INT4 DEFAULT 0 NOT NULL,
     error_message TEXT,
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     completed_at DATETIME,
     FOREIGN KEY (watcher_id) REFERENCES watchers (id) ON DELETE CASCADE
 );
 
 -- Store individual song sync results
 CREATE TABLE sync_results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     sync_operation_id INTEGER NOT NULL,
     source_song_id INTEGER NOT NULL,
     target_song_id INTEGER,
     status TEXT NOT NULL, -- 'matched', 'added', 'failed', 'not_found'
     error_message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (sync_operation_id) REFERENCES sync_operations (id) ON DELETE CASCADE,
     FOREIGN KEY (source_song_id) REFERENCES songs (id),
     FOREIGN KEY (target_song_id) REFERENCES songs (id)

@@ -1,5 +1,6 @@
 use anyhow::Result;
-use sqlx::{SqlitePool, Row};
+use sqlx::SqlitePool;
+#[allow(unused_imports)]
 use time::OffsetDateTime;
 
 use crate::users::models::*;
@@ -13,15 +14,20 @@ impl WatcherRepository {
         Self { pool }
     }
 
-    pub async fn create_watcher(&self, user_id: i64, request: CreateWatcherRequest) -> Result<Watcher> {
-        let now = OffsetDateTime::now_utc();
+    pub async fn create_watcher(
+        &self,
+        user_id: i64,
+        request: CreateWatcherRequest,
+    ) -> Result<Watcher> {
         let sync_frequency = request.sync_frequency.unwrap_or(300);
-        
-        let row = sqlx::query!(
+
+        let watcher = sqlx::query_as!(
+            Watcher,
             r#"
             INSERT INTO watchers (user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, sync_frequency, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-            RETURNING id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, is_active, sync_frequency, last_sync_at, created_at, updated_at
+            VALUES ($1, $2, $3, $4, $5, $6, $7, datetime('now'), datetime('now'))
+            RETURNING id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, 
+                      is_active, sync_frequency, last_sync_at, created_at as "created_at: OffsetDateTime", updated_at as "updated_at: OffsetDateTime"
             "#,
             user_id,
             request.name,
@@ -29,27 +35,12 @@ impl WatcherRepository {
             request.source_playlist_id,
             request.target_service,
             request.target_playlist_id,
-            sync_frequency,
-            now,
-            now
+            sync_frequency
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(Watcher {
-            id: row.id,
-            user_id: row.user_id,
-            name: row.name,
-            source_service: row.source_service,
-            source_playlist_id: row.source_playlist_id,
-            target_service: row.target_service,
-            target_playlist_id: row.target_playlist_id,
-            is_active: row.is_active != 0,
-            sync_frequency: row.sync_frequency,
-            last_sync_at: row.last_sync_at,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
+        Ok(watcher)
     }
 
     pub async fn get_watchers_by_user(&self, user_id: i64) -> Result<Vec<Watcher>> {
@@ -68,6 +59,23 @@ impl WatcherRepository {
         .await?;
 
         Ok(rows)
+    }
+
+    pub async fn get_watcher_by_id(&self, watcher_id: i64) -> Result<Option<Watcher>> {
+        let row = sqlx::query_as!(
+            Watcher,
+            r#"
+            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, 
+                   is_active, sync_frequency, last_sync_at, created_at, updated_at
+            FROM watchers 
+            WHERE id = ?1
+            "#,
+            watcher_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
     }
 
     pub async fn get_watcher_by_name(&self, user_id: i64, name: &str) -> Result<Option<Watcher>> {
@@ -90,9 +98,8 @@ impl WatcherRepository {
 
     pub async fn update_watcher_status(&self, watcher_id: i64, is_active: bool) -> Result<()> {
         sqlx::query!(
-            "UPDATE watchers SET is_active = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE watchers SET is_active = ?1, updated_at = date('now') WHERE id = ?2",
             is_active,
-            OffsetDateTime::now_utc(),
             watcher_id
         )
         .execute(&self.pool)
@@ -102,11 +109,8 @@ impl WatcherRepository {
     }
 
     pub async fn update_last_sync(&self, watcher_id: i64) -> Result<()> {
-        let now = OffsetDateTime::now_utc();
         sqlx::query!(
-            "UPDATE watchers SET last_sync_at = ?1, updated_at = ?2 WHERE id = ?3",
-            now,
-            now,
+            "UPDATE watchers SET last_sync_at = date('now'), updated_at = date('now') WHERE id = ?1",
             watcher_id
         )
         .execute(&self.pool)
@@ -142,20 +146,28 @@ impl SongRepository {
         Self { pool }
     }
 
-    pub async fn upsert_song(&self, service: &str, external_id: &str, title: &str, artist: Option<&str>, album: Option<&str>, duration_ms: Option<i32>, songlink_data: Option<&str>) -> Result<Song> {
-        let now = OffsetDateTime::now_utc();
-        
-        let row = sqlx::query!(
+    pub async fn upsert_song(
+        &self,
+        service: &str,
+        external_id: &str,
+        title: &str,
+        artist: Option<&str>,
+        album: Option<&str>,
+        duration_ms: Option<i32>,
+        songlink_data: Option<&str>,
+    ) -> Result<Song> {
+        let song = sqlx::query_as!(
+            Song,
             r#"
             INSERT INTO songs (service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, date('now'), date('now'))
             ON CONFLICT(service, external_id) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
                 album = excluded.album,
                 duration_ms = excluded.duration_ms,
                 songlink_data = excluded.songlink_data,
-                updated_at = excluded.updated_at
+                updated_at = date('now')
             RETURNING id, service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at
             "#,
             service,
@@ -164,28 +176,19 @@ impl SongRepository {
             artist,
             album,
             duration_ms,
-            songlink_data,
-            now,
-            now
+            songlink_data
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(Song {
-            id: row.id,
-            service: row.service,
-            external_id: row.external_id,
-            title: row.title,
-            artist: row.artist,
-            album: row.album,
-            duration_ms: row.duration_ms,
-            songlink_data: row.songlink_data,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
+        Ok(song)
     }
 
-    pub async fn get_song_by_service_id(&self, service: &str, external_id: &str) -> Result<Option<Song>> {
+    pub async fn get_song_by_service_id(
+        &self,
+        service: &str,
+        external_id: &str,
+    ) -> Result<Option<Song>> {
         let row = sqlx::query_as!(
             Song,
             r#"
@@ -212,52 +215,48 @@ impl SyncRepository {
         Self { pool }
     }
 
-    pub async fn create_sync_operation(&self, watcher_id: i64, operation_type: &str) -> Result<SyncOperation> {
-        let now = OffsetDateTime::now_utc();
-        
-        let row = sqlx::query!(
+    pub async fn create_sync_operation(
+        &self,
+        watcher_id: i64,
+        operation_type: &str,
+    ) -> Result<SyncOperation> {
+        let sync_operation = sqlx::query_as!(
+            SyncOperation,
             r#"
             INSERT INTO sync_operations (watcher_id, operation_type, status, started_at)
-            VALUES (?1, ?2, 'pending', ?3)
+            VALUES (?1, ?2, 'pending', date('now'))
             RETURNING id, watcher_id, operation_type, status, songs_added, songs_removed, songs_failed, error_message, started_at, completed_at
             "#,
             watcher_id,
-            operation_type,
-            now
+            operation_type
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(SyncOperation {
-            id: row.id,
-            watcher_id: row.watcher_id,
-            operation_type: row.operation_type,
-            status: row.status,
-            songs_added: row.songs_added,
-            songs_removed: row.songs_removed,
-            songs_failed: row.songs_failed,
-            error_message: row.error_message,
-            started_at: row.started_at,
-            completed_at: row.completed_at,
-        })
+        Ok(sync_operation)
     }
 
-    pub async fn update_sync_operation(&self, sync_id: i64, status: &str, songs_added: i32, songs_removed: i32, songs_failed: i32, error_message: Option<&str>) -> Result<()> {
-        let now = OffsetDateTime::now_utc();
-        let completed_at = if status == "completed" || status == "failed" { Some(now) } else { None };
-        
+    pub async fn update_sync_operation(
+        &self,
+        sync_id: i64,
+        status: &str,
+        songs_added: i32,
+        songs_removed: i32,
+        songs_failed: i32,
+        error_message: Option<&str>,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE sync_operations 
-            SET status = ?1, songs_added = ?2, songs_removed = ?3, songs_failed = ?4, error_message = ?5, completed_at = ?6
-            WHERE id = ?7
+            SET status = ?1, songs_added = ?2, songs_removed = ?3, songs_failed = ?4, error_message = ?5, 
+                completed_at = CASE WHEN ?1 IN ('completed', 'failed') THEN date('now') ELSE NULL END
+            WHERE id = ?6
             "#,
             status,
             songs_added,
             songs_removed,
             songs_failed,
             error_message,
-            completed_at,
             sync_id
         )
         .execute(&self.pool)
@@ -266,11 +265,19 @@ impl SyncRepository {
         Ok(())
     }
 
-    pub async fn get_sync_operations_by_watcher(&self, watcher_id: i64, limit: i32) -> Result<Vec<SyncOperation>> {
+    pub async fn get_sync_operations_by_watcher(
+        &self,
+        watcher_id: i64,
+        limit: i32,
+    ) -> Result<Vec<SyncOperation>> {
         let rows = sqlx::query_as!(
             SyncOperation,
             r#"
-            SELECT id, watcher_id, operation_type, status, songs_added, songs_removed, songs_failed, error_message, started_at, completed_at
+            SELECT id, watcher_id, operation_type, status, 
+                   songs_added as "songs_added: i32", 
+                   songs_removed as "songs_removed: i32", 
+                   songs_failed as "songs_failed: i32", 
+                   error_message, started_at, completed_at
             FROM sync_operations 
             WHERE watcher_id = ?1 
             ORDER BY started_at DESC 

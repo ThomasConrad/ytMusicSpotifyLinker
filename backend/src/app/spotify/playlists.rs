@@ -485,16 +485,16 @@ impl SpotifyPlaylistService {
         .map_err(SpotifyError::DatabaseError)?;
 
         Ok(record.map(|r| Playlist {
-            id: r.id.unwrap_or(0),
+            id: r.id,
             service: r.service,
             external_id: r.external_id,
             name: r.name,
             description: r.description,
-            total_tracks: r.total_tracks.unwrap_or(0) as i32,
-            is_public: r.is_public.unwrap_or(false),
+            total_tracks: r.total_tracks as i32,
+            is_public: r.is_public,
             owner_id: r.owner_id,
-            created_at: r.created_at.unwrap_or_else(OffsetDateTime::now_utc),
-            updated_at: r.updated_at.unwrap_or_else(OffsetDateTime::now_utc),
+            created_at: r.created_at,
+            updated_at: r.updated_at,
         }))
     }
 
