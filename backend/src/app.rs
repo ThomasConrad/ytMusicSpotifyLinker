@@ -1,5 +1,5 @@
-pub use watcher_simple::{Watcher, WatcherError};
+pub use watcher::{Watcher, WatcherError};
 
 mod songlink;
 pub mod spotify;
-mod watcher_simple;
+mod watcher;

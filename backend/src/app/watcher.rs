@@ -1,5 +1,5 @@
 use crate::app::songlink::SonglinkClient;
-use crate::app::spotify::{SpotifyPlaylistService, SpotifySyncService};
+use crate::app::spotify::SpotifySyncService;
 use crate::users::repository::{WatcherRepository, SyncRepository};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -25,6 +25,8 @@ pub enum WatcherError {
     DatabaseError(#[from] sqlx::Error),
     #[error("Service error: {0}")]
     ServiceError(String),
+    #[error("Repository error: {0}")]
+    RepositoryError(#[from] anyhow::Error),
 }
 
 pub struct Watcher {
@@ -107,7 +109,7 @@ impl Watcher {
     async fn sync_watcher(
         watcher_id: i64,
         pool: &SqlitePool,
-        songlink_client: &SonglinkClient,
+        _songlink_client: &SonglinkClient,
     ) -> Result<()> {
         let watcher_repo = WatcherRepository::new(pool.clone());
         let sync_repo = SyncRepository::new(pool.clone());
@@ -171,7 +173,7 @@ impl Watcher {
                     0,
                     0,
                     0,
-                    Some(error_msg.clone()),
+                    Some(&error_msg),
                 ).await?;
                 
                 tracing::error!("Sync failed for watcher {}: {}", watcher_id, error_msg);
@@ -185,7 +187,7 @@ impl Watcher {
     
     async fn sync_spotify_watcher(
         watcher_id: i64,
-        watcher: &crate::users::models::Watcher,
+        _watcher: &crate::users::models::Watcher,
         pool: &SqlitePool,
     ) -> Result<SyncResult> {
         // Get environment variables for Spotify client

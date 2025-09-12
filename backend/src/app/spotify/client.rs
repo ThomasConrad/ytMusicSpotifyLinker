@@ -1,3 +1,4 @@
+use futures_util::StreamExt;
 use rspotify::prelude::*;
 use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use sqlx::SqlitePool;
@@ -288,6 +289,7 @@ impl SpotifyClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_util::StreamExt;
     use sqlx::sqlite::SqlitePoolOptions;
     use time::OffsetDateTime;
 
@@ -396,5 +398,92 @@ mod tests {
 
         let is_auth = client.is_authenticated(1).await.unwrap();
         assert!(!is_auth);
+    }
+
+    #[tokio::test]
+    async fn test_spotify_api_connection_with_credentials() {
+        // Load environment variables from .env file if present
+        let _ = dotenvy::dotenv();
+
+        let client_id = match std::env::var("SPOTIFY_CLIENT_ID") {
+            Ok(id) => id,
+            Err(_) => {
+                println!("Skipping test - SPOTIFY_CLIENT_ID not set");
+                return;
+            }
+        };
+
+        let client_secret = match std::env::var("SPOTIFY_CLIENT_SECRET") {
+            Ok(secret) => secret,
+            Err(_) => {
+                println!("Skipping test - SPOTIFY_CLIENT_SECRET not set");
+                return;
+            }
+        };
+
+        // Test basic Spotify API connectivity without user authentication
+        // This tests if we can create a client credentials flow connection
+        use rspotify::{ClientCredsSpotify, Credentials};
+
+        let creds = Credentials::new(&client_id, &client_secret);
+        let spotify = ClientCredsSpotify::new(creds);
+
+        // Request a token using client credentials flow
+        match spotify.request_token().await {
+            Ok(_) => {
+                println!("✓ Successfully obtained access token from Spotify API");
+
+                // Try to make a simple API call to verify connection
+                // Use featured_playlists as it's a simple async method
+                let mut stream = spotify.new_releases(None);
+                match stream.next().await {
+                    Some(Ok(_album)) => println!("✓ Successfully made API call to Spotify"),
+                    Some(Err(e)) => println!("⚠ Token obtained but API call failed: {}", e),
+                    None => println!("⚠ No albums returned from Spotify"),
+                }
+            }
+            Err(e) => {
+                panic!("Failed to connect to Spotify API: {}. Check your SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables.", e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_spotify_auth_flow_creation() {
+        // This tests that we can create the auth flow without environment variables
+        use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth};
+        use std::collections::HashSet;
+
+        let client_id = "test_client_id";
+        let redirect_uri = "http://localhost:3000/callback";
+
+        let creds = Credentials::new(client_id, "");
+        let oauth = OAuth {
+            redirect_uri: redirect_uri.to_string(),
+            scopes: HashSet::from([
+                "user-read-private".to_string(),
+                "user-read-email".to_string(),
+                "playlist-read-private".to_string(),
+                "playlist-modify-private".to_string(),
+                "playlist-modify-public".to_string(),
+            ]),
+            state: "test_state".to_string(),
+            proxies: None,
+        };
+
+        let config = Config {
+            token_cached: false,
+            token_refreshing: false,
+            ..Default::default()
+        };
+
+        let mut spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
+
+        // Test that we can generate an auth URL
+        let auth_url = spotify.get_authorize_url(None).unwrap();
+        assert!(auth_url.contains("spotify.com"));
+        assert!(auth_url.contains(client_id));
+        assert!(auth_url.contains("redirect_uri"));
+        println!("✓ Successfully created Spotify auth URL: {}", auth_url);
     }
 }

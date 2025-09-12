@@ -22,12 +22,30 @@ pub struct WatcherSummary {
     pub is_active: bool,
     pub last_sync_at: Option<OffsetDateTime>,
     pub last_sync_status: Option<String>,
-    pub total_songs: Option<i32>,
+    pub total_songs: i32,
     pub sync_success_rate: Option<f32>,
     pub created_at: OffsetDateTime,
     pub source_playlist_id: String,
     pub target_playlist_id: Option<String>,
     pub sync_frequency: i32,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct WatcherWithStats {
+    pub id: i64,
+    pub name: String,
+    pub source_service: String,
+    pub source_playlist_id: String,
+    pub target_service: String,
+    pub target_playlist_id: Option<String>,
+    pub is_active: bool,
+    pub sync_frequency: i32,
+    pub last_sync_at: Option<OffsetDateTime>,
+    pub created_at: OffsetDateTime,
+    pub last_sync_status: Option<String>,
+    pub total_sync_operations: i32,
+    pub successful_syncs: i32,
+    pub total_songs: i32,
 }
 
 #[derive(Debug, Serialize)]
@@ -373,27 +391,36 @@ async fn get_enhanced_watchers(
     pool: &SqlitePool,
     user_id: i64,
 ) -> Result<Vec<WatcherSummary>, sqlx::Error> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as!(
+        WatcherWithStats,
         r#"
+        WITH sync_stats AS (
+            SELECT 
+                watcher_id,
+                COUNT(*) as total_operations,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_operations,
+                COALESCE(SUM(songs_added + songs_removed), 0) as total_songs
+            FROM sync_operations 
+            GROUP BY watcher_id
+        )
         SELECT 
-            w.id               as "id!: i64",
+            w.id,
             w.name,
             w.source_service,
             w.source_playlist_id,
             w.target_service,
             w.target_playlist_id,
-            w.is_active        as "is_active!: i64",
-            w.sync_frequency   as "sync_frequency!: i64",
+            w.is_active,
+            w.sync_frequency,
             w.last_sync_at,
             w.created_at,
-            so.status          as last_sync_status,
-            COUNT(so.id)                                           as "total_sync_operations!: i64",
-            COUNT(CASE WHEN so.status = 'completed' THEN 1 END)    as "successful_syncs!: i64",
-            COALESCE(SUM(so.songs_added + so.songs_removed), 0)    as "total_songs!: i64"
+            (SELECT status FROM sync_operations WHERE watcher_id = w.id ORDER BY started_at DESC LIMIT 1) as last_sync_status,
+            COALESCE(s.total_operations, 0) as "total_sync_operations!: i32",
+            COALESCE(s.successful_operations, 0) as "successful_syncs!: i32", 
+            COALESCE(s.total_songs, 0) as "total_songs!: i32"
         FROM watchers w
-        LEFT JOIN sync_operations so ON w.id = so.watcher_id
+        LEFT JOIN sync_stats s ON w.id = s.watcher_id
         WHERE w.user_id = ?
-        GROUP BY w.id
         ORDER BY w.created_at DESC
         "#,
         user_id
@@ -401,32 +428,34 @@ async fn get_enhanced_watchers(
     .fetch_all(pool)
     .await?;
 
-    let mut watchers = Vec::new();
-    for row in rows {
-        let total_ops = row.total_sync_operations;
-        let successful_ops = row.successful_syncs;
-        let sync_success_rate = if total_ops > 0 {
-            Some(successful_ops as f32 / total_ops as f32 * 100.0)
-        } else {
-            None
-        };
+    let watchers = rows
+        .into_iter()
+        .map(|row| {
+            let total_ops = row.total_sync_operations;
+            let successful_ops = row.successful_syncs;
+            let sync_success_rate = if total_ops > 0 {
+                Some(successful_ops as f32 / total_ops as f32 * 100.0)
+            } else {
+                None
+            };
 
-        watchers.push(WatcherSummary {
-            id: row.id,
-            name: row.name,
-            source_service: row.source_service,
-            target_service: row.target_service,
-            is_active: row.is_active != 0,
-            last_sync_at: row.last_sync_at,
-            last_sync_status: Some(row.last_sync_status),
-            total_songs: Some(row.total_songs as i32),
-            sync_success_rate,
-            created_at: row.created_at,
-            source_playlist_id: row.source_playlist_id,
-            target_playlist_id: row.target_playlist_id,
-            sync_frequency: row.sync_frequency as i32,
-        });
-    }
+            WatcherSummary {
+                id: row.id,
+                name: row.name,
+                source_service: row.source_service,
+                target_service: row.target_service,
+                is_active: row.is_active,
+                last_sync_at: row.last_sync_at,
+                last_sync_status: row.last_sync_status,
+                total_songs: row.total_songs,
+                sync_success_rate,
+                created_at: row.created_at,
+                source_playlist_id: row.source_playlist_id,
+                target_playlist_id: row.target_playlist_id,
+                sync_frequency: row.sync_frequency,
+            }
+        })
+        .collect();
 
     Ok(watchers)
 }
@@ -503,7 +532,8 @@ async fn get_watcher_sync_history(
 
     // Get paginated operations
     let offset = (page - 1) * per_page;
-    let operations = sqlx::query!(
+    let operations = sqlx::query_as!(
+        SyncOperationSummary,
         r#"
         SELECT id, operation_type, status, songs_added, songs_removed, songs_failed, 
                error_message, started_at, completed_at
@@ -518,21 +548,6 @@ async fn get_watcher_sync_history(
     )
     .fetch_all(pool)
     .await?;
-
-    let operations = operations
-        .into_iter()
-        .map(|row| SyncOperationSummary {
-            id: row.id,
-            operation_type: row.operation_type,
-            status: row.status,
-            songs_added: row.songs_added,
-            songs_removed: row.songs_removed,
-            songs_failed: row.songs_failed,
-            error_message: row.error_message,
-            started_at: row.started_at,
-            completed_at: row.completed_at,
-        })
-        .collect();
 
     Ok(Some(SyncHistoryResponse {
         watcher_id,
@@ -552,7 +567,8 @@ async fn get_recent_sync_operations(
     watcher_id: i64,
     limit: i32,
 ) -> Result<Vec<SyncOperationSummary>, sqlx::Error> {
-    let operations = sqlx::query!(
+    let operations = sqlx::query_as!(
+        SyncOperationSummary,
         r#"
         SELECT id, operation_type, status, songs_added, songs_removed, songs_failed, 
                error_message, started_at, completed_at
@@ -567,20 +583,7 @@ async fn get_recent_sync_operations(
     .fetch_all(pool)
     .await?;
 
-    Ok(operations
-        .into_iter()
-        .map(|row| SyncOperationSummary {
-            id: row.id,
-            operation_type: row.operation_type,
-            status: row.status,
-            songs_added: row.songs_added,
-            songs_removed: row.songs_removed,
-            songs_failed: row.songs_failed,
-            error_message: row.error_message,
-            started_at: row.started_at,
-            completed_at: row.completed_at,
-        })
-        .collect())
+    Ok(operations)
 }
 
 async fn calculate_watcher_statistics(

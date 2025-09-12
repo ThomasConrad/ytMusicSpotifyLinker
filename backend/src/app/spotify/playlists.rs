@@ -470,7 +470,8 @@ impl SpotifyPlaylistService {
         &self,
         playlist_id: &str,
     ) -> SpotifyResult<Option<Playlist>> {
-        let record = sqlx::query!(
+        let record = sqlx::query_as!(
+            Playlist,
             r#"
             SELECT id, service, external_id, name, description, total_tracks, is_public, owner_id, created_at, updated_at
             FROM playlists 
@@ -482,18 +483,7 @@ impl SpotifyPlaylistService {
         .await
         .map_err(SpotifyError::DatabaseError)?;
 
-        Ok(record.map(|r| Playlist {
-            id: r.id,
-            service: r.service,
-            external_id: r.external_id,
-            name: r.name,
-            description: r.description,
-            total_tracks: r.total_tracks,
-            is_public: r.is_public,
-            owner_id: r.owner_id,
-            created_at: r.created_at,
-            updated_at: r.updated_at,
-        }))
+        Ok(record)
     }
 
     /// Clear all caches
