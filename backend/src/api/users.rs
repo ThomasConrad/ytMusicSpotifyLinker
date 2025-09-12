@@ -387,7 +387,7 @@ async fn delete_user_credentials(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::{sqlite::SqlitePoolOptions, Row};
+    use sqlx::sqlite::SqlitePoolOptions;
 
     async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePoolOptions::new()

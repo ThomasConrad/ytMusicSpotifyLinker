@@ -494,19 +494,17 @@ async fn get_playlist_tracks(
             let track_responses: Vec<TrackResponse> = tracks
                 .into_iter()
                 .filter_map(|item| {
-                    if let Some(track) = item.track {
-                        if let rspotify::model::PlayableItem::Track(full_track) = track {
-                            return Some(TrackResponse {
-                                id: full_track.id.map(|id| id.id().to_string()),
-                                name: full_track.name,
-                                artists: full_track.artists.iter().map(|a| a.name.clone()).collect(),
-                                album: Some(full_track.album.name),
-                                duration_ms: Some(full_track.duration.num_milliseconds() as i32),
-                                external_url: full_track.external_urls.get("spotify").cloned(),
-                                is_playable: full_track.is_playable.unwrap_or(true),
-                                added_at: item.added_at.map(|dt| dt.to_string()),
-                            });
-                        }
+                    if let Some(rspotify::model::PlayableItem::Track(full_track)) = item.track {
+                        return Some(TrackResponse {
+                            id: full_track.id.map(|id| id.id().to_string()),
+                            name: full_track.name,
+                            artists: full_track.artists.iter().map(|a| a.name.clone()).collect(),
+                            album: Some(full_track.album.name),
+                            duration_ms: Some(full_track.duration.num_milliseconds() as i32),
+                            external_url: full_track.external_urls.get("spotify").cloned(),
+                            is_playable: full_track.is_playable.unwrap_or(true),
+                            added_at: item.added_at.map(|dt| dt.to_string()),
+                        });
                     }
                     None
                 })

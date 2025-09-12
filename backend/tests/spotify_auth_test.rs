@@ -4,7 +4,6 @@ use httpmock::prelude::*;
 use reqwest::Client;
 use serde_json::json;
 use sqlx::sqlite::SqlitePool;
-use sqlx::Row;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use test_log::test;
@@ -102,7 +101,7 @@ async fn create_authenticated_user(client: &Client, base_url: &str, username: &s
 #[test(tokio::test)]
 async fn test_spotify_auth_start_success() -> Result<()> {
     // Start the server
-    let (addr, _pool, _env_vars) = setup_test_server_with_spotify_env().await?;
+    let (addr, pool, _env_vars) = setup_test_server_with_spotify_env().await?;
     let jar = std::sync::Arc::new(reqwest::cookie::Jar::default());
     let client = Client::builder().cookie_provider(jar).build()?;
     let base_url = format!("http://{}", addr);
@@ -129,7 +128,7 @@ async fn test_spotify_auth_start_success() -> Result<()> {
 #[test(tokio::test)]
 async fn test_spotify_auth_start_unauthorized() -> Result<()> {
     // Start the server
-    let (addr, _pool, _env_vars) = setup_test_server_with_spotify_env().await?;
+    let (addr, pool, _env_vars) = setup_test_server_with_spotify_env().await?;
     let client = Client::new();
     let base_url = format!("http://{}", addr);
 
@@ -210,7 +209,7 @@ async fn test_spotify_auth_callback_success() -> Result<()> {
 #[test(tokio::test)]
 async fn test_spotify_auth_callback_error_cases() -> Result<()> {
     // Start the server
-    let (addr, _pool, _env_vars) = setup_test_server_with_spotify_env().await?;
+    let (addr, pool, _env_vars) = setup_test_server_with_spotify_env().await?;
     let jar = std::sync::Arc::new(reqwest::cookie::Jar::default());
     let client = Client::builder().cookie_provider(jar).build()?;
     let base_url = format!("http://{}", addr);
@@ -255,7 +254,7 @@ async fn test_spotify_auth_callback_error_cases() -> Result<()> {
 #[test(tokio::test)]
 async fn test_spotify_auth_status_not_authenticated() -> Result<()> {
     // Start the server
-    let (addr, _pool, _env_vars) = setup_test_server_with_spotify_env().await?;
+    let (addr, pool, _env_vars) = setup_test_server_with_spotify_env().await?;
     let jar = std::sync::Arc::new(reqwest::cookie::Jar::default());
     let client = Client::builder().cookie_provider(jar).build()?;
     let base_url = format!("http://{}", addr);

@@ -15,7 +15,7 @@ use tower_sessions::{cookie::Key, session_store::Error as SessionStoreError};
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::{
-    api::api,
+    api::routes,
     app::{Watcher, WatcherError},
     users::database,
 };
@@ -51,7 +51,7 @@ impl Router {
 
     pub fn get_axum_router(&self) -> axum::Router {
         // Mount the consolidated API router
-        api::router(self.db.clone())
+        routes::router(self.db.clone())
     }
 
     pub async fn serve(self) -> Result<(), RouterError> {

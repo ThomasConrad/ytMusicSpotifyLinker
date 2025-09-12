@@ -150,6 +150,17 @@ pub struct SongFailure {
     pub error: String,
 }
 
+#[derive(Debug)]
+pub struct UpsertSongRequest<'a> {
+    pub service: &'a str,
+    pub external_id: &'a str,
+    pub title: &'a str,
+    pub artist: Option<&'a str>,
+    pub album: Option<&'a str>,
+    pub duration_ms: Option<i32>,
+    pub songlink_data: Option<&'a str>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SyncOperationResponse {
     pub id: i64,

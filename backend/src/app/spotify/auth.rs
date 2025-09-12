@@ -148,7 +148,7 @@ impl SpotifyAuthService {
         let spotify = AuthCodePkceSpotify::with_config(creds, oauth, config);
 
         // Exchange authorization code for tokens
-        spotify.request_token(&code).await.map_err(|e| {
+        spotify.request_token(code).await.map_err(|e| {
             SpotifyError::AuthenticationFailed(format!("Token exchange failed: {}", e))
         })?;
 

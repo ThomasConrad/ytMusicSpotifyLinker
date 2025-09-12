@@ -4,6 +4,6 @@ pub mod protected;
 pub mod spotify;
 pub mod users;
 pub mod watchers;
-pub mod api;
+pub mod routes;
 
 pub use router::Router;

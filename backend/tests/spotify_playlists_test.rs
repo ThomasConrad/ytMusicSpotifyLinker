@@ -1,7 +1,7 @@
 use anyhow::Result;
 use reqwest::Client;
 use serde_json::json;
-use sqlx::{sqlite::SqlitePool, Row};
+use sqlx::sqlite::SqlitePool;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use test_log::test;
@@ -42,12 +42,12 @@ async fn setup_test_server_with_spotify_env() -> Result<(SocketAddr, SqlitePool,
     let session_store = SqliteStore::new(pool.clone());
     session_store.migrate().await?;
 
-    let key = Key::generate();
+    let _key = Key::generate();
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::days(1)));
 
-    let app = ServiceBuilder::new()
+    let _app = ServiceBuilder::new()
         .layer(session_layer)
         .service(router);
 
@@ -219,7 +219,7 @@ mod playlist_service_tests {
         // Create required tables for testing
         sqlx::query!(
             r#"
-            CREATE TABLE user_credentials (
+            CREATE TABLE IF NOT EXISTS user_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 service TEXT NOT NULL,
@@ -239,7 +239,7 @@ mod playlist_service_tests {
 
         sqlx::query!(
             r#"
-            CREATE TABLE playlists (
+            CREATE TABLE IF NOT EXISTS playlists (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 service TEXT NOT NULL,
                 external_id TEXT NOT NULL,
@@ -260,7 +260,7 @@ mod playlist_service_tests {
 
         sqlx::query!(
             r#"
-            CREATE TABLE songs (
+            CREATE TABLE IF NOT EXISTS songs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 service TEXT NOT NULL,
                 external_id TEXT NOT NULL,
@@ -281,7 +281,7 @@ mod playlist_service_tests {
 
         sqlx::query!(
             r#"
-            CREATE TABLE playlist_songs (
+            CREATE TABLE IF NOT EXISTS playlist_songs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 playlist_id INTEGER NOT NULL,
                 song_id INTEGER NOT NULL,
@@ -365,7 +365,7 @@ mod sync_service_tests {
         // Create required tables for testing
         sqlx::query!(
             r#"
-            CREATE TABLE watchers (
+            CREATE TABLE IF NOT EXISTS watchers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
@@ -387,7 +387,7 @@ mod sync_service_tests {
 
         sqlx::query!(
             r#"
-            CREATE TABLE sync_operations (
+            CREATE TABLE IF NOT EXISTS sync_operations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 watcher_id INTEGER NOT NULL,
                 operation_type TEXT NOT NULL,
@@ -408,7 +408,7 @@ mod sync_service_tests {
 
         sqlx::query!(
             r#"
-            CREATE TABLE user_credentials (
+            CREATE TABLE IF NOT EXISTS user_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 service TEXT NOT NULL,

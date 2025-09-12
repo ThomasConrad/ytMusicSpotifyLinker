@@ -146,16 +146,7 @@ impl SongRepository {
         Self { pool }
     }
 
-    pub async fn upsert_song(
-        &self,
-        service: &str,
-        external_id: &str,
-        title: &str,
-        artist: Option<&str>,
-        album: Option<&str>,
-        duration_ms: Option<i32>,
-        songlink_data: Option<&str>,
-    ) -> Result<Song> {
+    pub async fn upsert_song(&self, request: UpsertSongRequest<'_>) -> Result<Song> {
         let song = sqlx::query_as!(
             Song,
             r#"
@@ -170,13 +161,13 @@ impl SongRepository {
                 updated_at = date('now')
             RETURNING id, service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at
             "#,
-            service,
-            external_id,
-            title,
-            artist,
-            album,
-            duration_ms,
-            songlink_data
+            request.service,
+            request.external_id,
+            request.title,
+            request.artist,
+            request.album,
+            request.duration_ms,
+            request.songlink_data
         )
         .fetch_one(&self.pool)
         .await?;

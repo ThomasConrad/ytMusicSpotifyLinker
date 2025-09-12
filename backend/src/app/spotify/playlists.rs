@@ -409,12 +409,11 @@ impl SpotifyPlaylistService {
 
         // Store tracks and relationships
         for (position, item) in tracks.iter().enumerate() {
-            if let Some(track) = &item.track {
-                if let rspotify::model::PlayableItem::Track(full_track) = track {
+            if let Some(rspotify::model::PlayableItem::Track(full_track)) = &item.track {
                     // Store song
                     let track_id_opt = full_track.id.as_ref().map(|id| id.id());
                     let artist_name_opt = full_track.artists.first().map(|a| a.name.as_str());
-                    let duration_ms = full_track.duration.num_milliseconds() as i64;
+                    let duration_ms = full_track.duration.num_milliseconds();
 
                     sqlx::query!(
                         r#"
@@ -460,7 +459,6 @@ impl SpotifyPlaylistService {
                         .await
                         .map_err(SpotifyError::DatabaseError)?;
                     }
-                }
             }
         }
 
@@ -490,7 +488,7 @@ impl SpotifyPlaylistService {
             external_id: r.external_id,
             name: r.name,
             description: r.description,
-            total_tracks: r.total_tracks as i32,
+            total_tracks: r.total_tracks,
             is_public: r.is_public,
             owner_id: r.owner_id,
             created_at: r.created_at,

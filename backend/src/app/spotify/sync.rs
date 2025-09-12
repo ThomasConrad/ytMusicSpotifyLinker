@@ -54,8 +54,7 @@ impl SpotifySyncService {
 
         // Process each track for cross-platform matching
         for track_item in source_tracks {
-            if let Some(track) = track_item.track {
-                if let PlayableItem::Track(full_track) = track {
+            if let Some(PlayableItem::Track(full_track)) = track_item.track {
                     let spotify_url = full_track
                         .external_urls
                         .get("spotify")
@@ -101,7 +100,6 @@ impl SpotifySyncService {
                             });
                         }
                     }
-                }
             }
         }
 
