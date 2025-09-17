@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE sync_operations \n            SET status = ?1, songs_added = ?2, songs_removed = ?3, songs_failed = ?4, error_message = ?5, \n                completed_at = CASE WHEN ?1 IN ('completed', 'failed') THEN date('now') ELSE NULL END\n            WHERE id = ?6\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "63f48351c5121df1feea06dd9bedd78745adff7d4071f7ae85e1d3dbc3ba22e6"
+}

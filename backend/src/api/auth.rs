@@ -26,7 +26,6 @@ impl AuthState {
     }
 }
 
-
 // JSON API DTOs for authentication
 #[derive(Debug, Deserialize)]
 pub struct JsonLoginRequest {
@@ -85,7 +84,6 @@ pub fn router(pool: SqlitePool) -> Router<()> {
         .with_state(state)
 }
 
-
 mod json {
     use super::*;
     use axum::extract::State;
@@ -110,7 +108,8 @@ mod json {
                         success: false,
                         error: "Failed to create session".to_string(),
                         error_code: Some("SESSION_ERROR".to_string()),
-                    }).into_response());
+                    })
+                    .into_response());
                 }
 
                 // Return success response with user profile
@@ -122,7 +121,8 @@ mod json {
                         username: user.username,
                         created_at: None, // TODO: Add created_at field to User model
                     }),
-                }).into_response())
+                })
+                .into_response())
             }
             Ok(None) => {
                 // Invalid credentials
@@ -130,7 +130,8 @@ mod json {
                     success: false,
                     error: "Invalid username or password".to_string(),
                     error_code: Some("INVALID_CREDENTIALS".to_string()),
-                }).into_response())
+                })
+                .into_response())
             }
             Err(_) => {
                 // Internal error
@@ -138,7 +139,8 @@ mod json {
                     success: false,
                     error: "Internal server error during authentication".to_string(),
                     error_code: Some("AUTH_ERROR".to_string()),
-                }).into_response())
+                })
+                .into_response())
             }
         }
     }
@@ -154,7 +156,8 @@ mod json {
                 success: false,
                 error: "Username cannot be empty".to_string(),
                 error_code: Some("INVALID_USERNAME".to_string()),
-            }).into_response());
+            })
+            .into_response());
         }
 
         if creds.password.len() < 6 {
@@ -162,7 +165,8 @@ mod json {
                 success: false,
                 error: "Password must be at least 6 characters long".to_string(),
                 error_code: Some("WEAK_PASSWORD".to_string()),
-            }).into_response());
+            })
+            .into_response());
         }
 
         // Create the user
@@ -174,7 +178,8 @@ mod json {
                         success: false,
                         error: "User created but failed to log in".to_string(),
                         error_code: Some("SESSION_ERROR".to_string()),
-                    }).into_response());
+                    })
+                    .into_response());
                 }
 
                 // Return success response
@@ -186,7 +191,8 @@ mod json {
                         username: user.username,
                         created_at: None, // TODO: Add created_at field to User model
                     }),
-                }).into_response())
+                })
+                .into_response())
             }
             Err(e) => {
                 // Handle specific error cases
@@ -200,7 +206,8 @@ mod json {
                     success: false,
                     error: error_message,
                     error_code: Some("REGISTRATION_FAILED".to_string()),
-                }).into_response())
+                })
+                .into_response())
             }
         }
     }
@@ -211,13 +218,15 @@ mod json {
                 success: false,
                 error: "Failed to logout".to_string(),
                 error_code: Some("LOGOUT_ERROR".to_string()),
-            }).into_response());
+            })
+            .into_response());
         }
 
         Ok(Json(JsonLogoutResponse {
             success: true,
             message: "Successfully logged out".to_string(),
-        }).into_response())
+        })
+        .into_response())
     }
 
     pub async fn profile(auth_session: AuthSession) -> Result<impl IntoResponse, StatusCode> {
@@ -227,11 +236,10 @@ mod json {
                     id: user.id,
                     username: user.username,
                     created_at: None, // TODO: Add created_at field to User model
-                }).into_response())
+                })
+                .into_response())
             }
-            None => {
-                Err(StatusCode::UNAUTHORIZED)
-            }
+            None => Err(StatusCode::UNAUTHORIZED),
         }
     }
 }

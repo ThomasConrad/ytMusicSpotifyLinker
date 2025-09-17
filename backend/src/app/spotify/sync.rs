@@ -55,51 +55,51 @@ impl SpotifySyncService {
         // Process each track for cross-platform matching
         for track_item in source_tracks {
             if let Some(PlayableItem::Track(full_track)) = track_item.track {
-                    let spotify_url = full_track
-                        .external_urls
-                        .get("spotify")
-                        .cloned()
-                        .unwrap_or_else(|| {
-                            format!(
-                                "spotify:track:{}",
-                                full_track
-                                    .id
-                                    .as_ref()
-                                    .map(|id| id.id())
-                                    .unwrap_or("unknown")
-                            )
-                        });
+                let spotify_url = full_track
+                    .external_urls
+                    .get("spotify")
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        format!(
+                            "spotify:track:{}",
+                            full_track
+                                .id
+                                .as_ref()
+                                .map(|id| id.id())
+                                .unwrap_or("unknown")
+                        )
+                    });
 
-                    match self
-                        .find_track_on_target_service(&spotify_url, target_service)
-                        .await
-                    {
-                        Ok(Some(target_track_info)) => {
-                            songs_to_add.push(SongResponse {
-                                id: 0, // Will be populated from database
-                                service: target_service.to_string(),
-                                external_id: target_track_info.external_id,
-                                title: full_track.name.clone(),
-                                artist: full_track.artists.first().map(|a| a.name.clone()),
-                                album: Some(full_track.album.name.clone()),
-                                duration_ms: Some(full_track.duration.num_milliseconds() as i32),
-                            });
-                        }
-                        Ok(None) => {
-                            songs_failed.push(SongFailure {
-                                title: full_track.name,
-                                artist: full_track.artists.first().map(|a| a.name.clone()),
-                                error: format!("Track not found on {}", target_service),
-                            });
-                        }
-                        Err(e) => {
-                            songs_failed.push(SongFailure {
-                                title: full_track.name,
-                                artist: full_track.artists.first().map(|a| a.name.clone()),
-                                error: format!("Error finding track: {}", e),
-                            });
-                        }
+                match self
+                    .find_track_on_target_service(&spotify_url, target_service)
+                    .await
+                {
+                    Ok(Some(target_track_info)) => {
+                        songs_to_add.push(SongResponse {
+                            id: 0, // Will be populated from database
+                            service: target_service.to_string(),
+                            external_id: target_track_info.external_id,
+                            title: full_track.name.clone(),
+                            artist: full_track.artists.first().map(|a| a.name.clone()),
+                            album: Some(full_track.album.name.clone()),
+                            duration_ms: Some(full_track.duration.num_milliseconds() as i32),
+                        });
                     }
+                    Ok(None) => {
+                        songs_failed.push(SongFailure {
+                            title: full_track.name,
+                            artist: full_track.artists.first().map(|a| a.name.clone()),
+                            error: format!("Track not found on {}", target_service),
+                        });
+                    }
+                    Err(e) => {
+                        songs_failed.push(SongFailure {
+                            title: full_track.name,
+                            artist: full_track.artists.first().map(|a| a.name.clone()),
+                            error: format!("Error finding track: {}", e),
+                        });
+                    }
+                }
             }
         }
 
@@ -135,7 +135,7 @@ impl SpotifySyncService {
             .map_err(|e| SpotifyError::ApiError(e.to_string()))?;
 
         let mut songs_added = 0;
-        let songs_failed ;
+        let songs_failed;
         let mut error_message = None;
 
         // Get user ID from watcher (assuming it's stored or can be derived)

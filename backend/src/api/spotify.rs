@@ -8,11 +8,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
-use rspotify::prelude::Id;
 use crate::{
     app::spotify::{SpotifyAuthService, SpotifyClient, SpotifyPlaylistService, SpotifySyncService},
     users::AuthSession,
 };
+use rspotify::prelude::Id;
 
 /// Request/Response DTOs for Spotify authentication
 #[derive(Debug, Deserialize)]
@@ -176,10 +176,10 @@ async fn auth_start(
     };
 
     // Create Spotify auth service
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut auth_service = SpotifyAuthService::new(client_id, redirect_uri, pool);
 
@@ -231,21 +231,28 @@ async fn auth_callback(
     };
 
     // Create Spotify auth service
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut auth_service = SpotifyAuthService::new(client_id, redirect_uri, pool);
 
     match auth_service.complete_auth_flow(&code, &state).await {
         Ok(_) => {
-            tracing::info!("Successfully connected Spotify account for user {}", user.id);
+            tracing::info!(
+                "Successfully connected Spotify account for user {}",
+                user.id
+            );
             Ok(Redirect::to("/dashboard?spotify_connected=true").into_response())
         }
         Err(e) => {
             tracing::error!("Failed to complete auth flow: {}", e);
-            Ok(Redirect::to(&format!("/dashboard?error=auth_failed&message={}", urlencoding::encode(&e.to_string()))).into_response())
+            Ok(Redirect::to(&format!(
+                "/dashboard?error=auth_failed&message={}",
+                urlencoding::encode(&e.to_string())
+            ))
+            .into_response())
         }
     }
 }
@@ -260,10 +267,10 @@ async fn auth_status(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let spotify_client = SpotifyClient::new(client_id, redirect_uri, pool);
 
@@ -279,7 +286,11 @@ async fn auth_status(
                         display_name: profile.display_name,
                         email: profile.email,
                         followers: profile.followers.map(|f| f.total).unwrap_or(0),
-                        premium: profile.product.as_ref().map(|p| matches!(p, rspotify::model::SubscriptionLevel::Premium)).unwrap_or(false),
+                        premium: profile
+                            .product
+                            .as_ref()
+                            .map(|p| matches!(p, rspotify::model::SubscriptionLevel::Premium))
+                            .unwrap_or(false),
                     }),
                     error: None,
                 })),
@@ -316,10 +327,10 @@ async fn auth_disconnect(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let auth_service = SpotifyAuthService::new(client_id, redirect_uri, pool);
 
@@ -327,14 +338,15 @@ async fn auth_disconnect(
         Ok(_) => Ok(Json(ApiSuccessResponse {
             success: true,
             message: "Successfully disconnected Spotify account".to_string(),
-        }).into_response()),
+        })
+        .into_response()),
         Err(e) => {
             let error_response = ApiErrorResponse {
                 success: false,
                 error: format!("Failed to disconnect: {}", e),
             };
             Ok(Json(error_response).into_response())
-        },
+        }
     }
 }
 
@@ -348,10 +360,10 @@ async fn test_connection(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let spotify_client = SpotifyClient::new(client_id, redirect_uri, pool);
 
@@ -359,21 +371,22 @@ async fn test_connection(
         Ok(true) => Ok(Json(ApiSuccessResponse {
             success: true,
             message: "Spotify connection is working".to_string(),
-        }).into_response()),
+        })
+        .into_response()),
         Ok(false) => {
             let error_response = ApiErrorResponse {
                 success: false,
                 error: "Spotify connection failed".to_string(),
             };
             Ok(Json(error_response).into_response())
-        },
+        }
         Err(e) => {
             let error_response = ApiErrorResponse {
                 success: false,
                 error: format!("Connection test failed: {}", e),
             };
             Ok(Json(error_response).into_response())
-        },
+        }
     }
 }
 
@@ -387,10 +400,10 @@ async fn get_user_playlists(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
 
@@ -436,10 +449,10 @@ async fn get_playlist_details(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
 
@@ -454,7 +467,11 @@ async fn get_playlist_details(
                 owner_id: playlist.owner.id.id().to_string(),
                 owner_display_name: playlist.owner.display_name,
                 image_url: playlist.images.first().map(|img| img.url.clone()),
-                external_url: playlist.external_urls.get("spotify").cloned().unwrap_or_default(),
+                external_url: playlist
+                    .external_urls
+                    .get("spotify")
+                    .cloned()
+                    .unwrap_or_default(),
             };
 
             Ok(Json(PlaylistDetailResponse {
@@ -482,14 +499,17 @@ async fn get_playlist_tracks(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
 
-    match playlist_service.get_playlist_tracks(user.id, &playlist_id).await {
+    match playlist_service
+        .get_playlist_tracks(user.id, &playlist_id)
+        .await
+    {
         Ok(tracks) => {
             let track_responses: Vec<TrackResponse> = tracks
                 .into_iter()
@@ -544,22 +564,26 @@ async fn create_playlist(
         return Ok(Json(ApiErrorResponse {
             success: false,
             error: "Playlist name cannot be empty".to_string(),
-        }).into_response());
+        })
+        .into_response());
     }
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let playlist_service = SpotifyPlaylistService::new(client_id, redirect_uri, pool);
 
-    match playlist_service.create_playlist(
-        user.id,
-        &request.name,
-        request.description.as_deref(),
-        request.public.unwrap_or(false),
-    ).await {
+    match playlist_service
+        .create_playlist(
+            user.id,
+            &request.name,
+            request.description.as_deref(),
+            request.public.unwrap_or(false),
+        )
+        .await
+    {
         Ok(playlist) => {
             let playlist_response = PlaylistResponse {
                 id: playlist.id.id().to_string(),
@@ -570,19 +594,25 @@ async fn create_playlist(
                 owner_id: playlist.owner.id.id().to_string(),
                 owner_display_name: playlist.owner.display_name,
                 image_url: playlist.images.first().map(|img| img.url.clone()),
-                external_url: playlist.external_urls.get("spotify").cloned().unwrap_or_default(),
+                external_url: playlist
+                    .external_urls
+                    .get("spotify")
+                    .cloned()
+                    .unwrap_or_default(),
             };
 
             Ok(Json(PlaylistDetailResponse {
                 success: true,
                 playlist: Some(playlist_response),
                 error: None,
-            }).into_response())
+            })
+            .into_response())
         }
         Err(e) => Ok(Json(ApiErrorResponse {
             success: false,
             error: format!("Failed to create playlist: {}", e),
-        }).into_response()),
+        })
+        .into_response()),
     }
 }
 
@@ -614,19 +644,22 @@ async fn sync_preview(
         }));
     }
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let sync_service = SpotifySyncService::new(client_id, redirect_uri, pool);
 
-    match sync_service.preview_sync(
-        user.id,
-        &request.source_playlist_id,
-        &request.target_service,
-        request.target_playlist_id.as_deref(),
-    ).await {
+    match sync_service
+        .preview_sync(
+            user.id,
+            &request.source_playlist_id,
+            &request.target_service,
+            request.target_playlist_id.as_deref(),
+        )
+        .await
+    {
         Ok(preview) => Ok(Json(SyncPreviewResponse {
             success: true,
             preview: Some(preview),
@@ -655,7 +688,7 @@ async fn sync_execute(
     // This is a security check to prevent users from syncing other users' watchers
     use crate::users::repository::WatcherRepository;
     let watcher_repo = WatcherRepository::new(pool.clone());
-    
+
     match watcher_repo.get_watcher_by_id(request.watcher_id).await {
         Ok(Some(watcher)) => {
             if watcher.user_id != user.id {
@@ -682,17 +715,20 @@ async fn sync_execute(
         }
     }
 
-    let client_id = std::env::var("SPOTIFY_CLIENT_ID")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let redirect_uri = std::env::var("SPOTIFY_REDIRECT_URI")
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let client_id =
+        std::env::var("SPOTIFY_CLIENT_ID").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let redirect_uri =
+        std::env::var("SPOTIFY_REDIRECT_URI").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let sync_service = SpotifySyncService::new(client_id, redirect_uri, pool);
 
     // Execute sync in the background
     // Note: In a production environment, this would be better handled by a task queue
     // For now, we'll execute it directly but could timeout for long operations
-    match sync_service.sync_playlist_to_target(request.watcher_id).await {
+    match sync_service
+        .sync_playlist_to_target(request.watcher_id)
+        .await
+    {
         Ok(operation) => Ok(Json(SyncOperationResponse {
             success: true,
             operation: Some(operation),
@@ -723,21 +759,25 @@ async fn sync_status(
     // First, we need to get the sync operation by ID to check if it exists
     // Since we don't have a direct method, we'll need to implement one or work around it
     // For now, let's get operations and filter by ID (not ideal, but works for testing)
-    
+
     // Note: In a production system, we should add a get_sync_operation_by_id method
     // For now, we'll search across recent operations to find the one with matching ID
     use crate::users::repository::WatcherRepository;
     let watcher_repo = WatcherRepository::new(pool);
-    
+
     // Get all watchers for this user and search their operations
     match watcher_repo.get_watchers_by_user(user.id).await {
         Ok(watchers) => {
             let mut found_operation = None;
-            
+
             for watcher in watchers {
-                match sync_repo.get_sync_operations_by_watcher(watcher.id, 50).await {
+                match sync_repo
+                    .get_sync_operations_by_watcher(watcher.id, 50)
+                    .await
+                {
                     Ok(operations) => {
-                        if let Some(operation) = operations.into_iter().find(|op| op.id == sync_id) {
+                        if let Some(operation) = operations.into_iter().find(|op| op.id == sync_id)
+                        {
                             found_operation = Some(operation);
                             break;
                         }
@@ -745,7 +785,7 @@ async fn sync_status(
                     Err(_) => continue,
                 }
             }
-            
+
             if let Some(operation) = found_operation {
                 // Operation already found in user's watchers, so it's owned by the user
                 Ok(Json(SyncStatusResponse {
@@ -916,7 +956,7 @@ mod tests {
     async fn test_create_playlist_request_deserialization() {
         let json = r#"{"name":"New Playlist","description":"A new playlist","public":true}"#;
         let request: CreatePlaylistRequest = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(request.name, "New Playlist");
         assert_eq!(request.description, Some("A new playlist".to_string()));
         assert_eq!(request.public, Some(true));
@@ -939,7 +979,7 @@ mod tests {
     async fn test_sync_preview_request_deserialization() {
         let json = r#"{"source_playlist_id":"spotify123","target_service":"youtube_music","target_playlist_id":"yt456"}"#;
         let request: SyncPreviewRequest = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(request.source_playlist_id, "spotify123");
         assert_eq!(request.target_service, "youtube_music");
         assert_eq!(request.target_playlist_id, Some("yt456".to_string()));
@@ -949,7 +989,7 @@ mod tests {
     async fn test_sync_execute_request_deserialization() {
         let json = r#"{"watcher_id":42}"#;
         let request: SyncExecuteRequest = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(request.watcher_id, 42);
     }
 

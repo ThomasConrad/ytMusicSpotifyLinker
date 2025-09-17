@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        WITH sync_stats AS (\n            SELECT \n                watcher_id,\n                COUNT(*) as total_operations,\n                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_operations,\n                COALESCE(SUM(songs_added + songs_removed), 0) as total_songs\n            FROM sync_operations \n            GROUP BY watcher_id\n        )\n        SELECT \n            w.id,\n            w.name,\n            w.source_service,\n            w.source_playlist_id,\n            w.target_service,\n            w.target_playlist_id,\n            w.is_active,\n            w.sync_frequency,\n            w.last_sync_at,\n            w.created_at,\n            (SELECT status FROM sync_operations WHERE watcher_id = w.id ORDER BY started_at DESC LIMIT 1) as last_sync_status,\n            COALESCE(s.total_operations, 0) as \"total_sync_operations!: i32\",\n            COALESCE(s.successful_operations, 0) as \"successful_syncs!: i32\", \n            COALESCE(s.total_songs, 0) as \"total_songs!: i32\"\n        FROM watchers w\n        LEFT JOIN sync_stats s ON w.id = s.watcher_id\n        WHERE w.user_id = ?\n        ORDER BY w.created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_service",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_playlist_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_service",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_playlist_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "sync_frequency",
+        "ordinal": 7,
+        "type_info": "Int4"
+      },
+      {
+        "name": "last_sync_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "last_sync_status",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_sync_operations!: i32",
+        "ordinal": 11,
+        "type_info": "Null"
+      },
+      {
+        "name": "successful_syncs!: i32",
+        "ordinal": 12,
+        "type_info": "Null"
+      },
+      {
+        "name": "total_songs!: i32",
+        "ordinal": 13,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3040dc0957afde985a484628d07de2f47f9928dfdbeac46772c8c8059d956506"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE watchers SET is_active = ?1, updated_at = date('now') WHERE id = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "b4f04e297791cd0e9fbf4a4f980661577e38821189ab141aa7287033666e5082"
+}

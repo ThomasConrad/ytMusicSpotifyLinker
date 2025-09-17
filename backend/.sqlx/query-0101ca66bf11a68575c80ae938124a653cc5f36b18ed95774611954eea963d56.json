@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, \n                   is_active, sync_frequency, last_sync_at, created_at, updated_at\n            FROM watchers \n            WHERE user_id = ? \n            ORDER BY created_at DESC\n            ",
+  "query": "\n            INSERT INTO watchers (user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, sync_frequency, created_at, updated_at)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, datetime('now'), datetime('now'))\n            RETURNING id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, \n                      is_active, sync_frequency, last_sync_at, created_at as \"created_at: OffsetDateTime\", updated_at as \"updated_at: OffsetDateTime\"\n            ",
   "describe": {
     "columns": [
       {
@@ -46,7 +46,7 @@
       {
         "name": "sync_frequency",
         "ordinal": 8,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "last_sync_at",
@@ -54,33 +54,33 @@
         "type_info": "Datetime"
       },
       {
-        "name": "created_at",
+        "name": "created_at: OffsetDateTime",
         "ordinal": 10,
         "type_info": "Datetime"
       },
       {
-        "name": "updated_at",
+        "name": "updated_at: OffsetDateTime",
         "ordinal": 11,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 7
     },
     "nullable": [
-      true,
       false,
       false,
       false,
       false,
       false,
+      false,
       true,
+      false,
+      false,
       true,
-      true,
-      true,
-      true,
-      true
+      false,
+      false
     ]
   },
-  "hash": "eee2d77271b6d8dd30e7b1dfd49616507f64537cf37f8137ef38f5e8b7d7b1ec"
+  "hash": "0101ca66bf11a68575c80ae938124a653cc5f36b18ed95774611954eea963d56"
 }

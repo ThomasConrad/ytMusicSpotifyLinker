@@ -108,46 +108,46 @@ pub struct SpotifyTrackResponse {
 pub enum SpotifyError {
     #[error("Authentication failed: {0}")]
     AuthenticationFailed(String),
-    
+
     #[error("API request failed: {0}")]
     ApiRequestFailed(String),
-    
+
     #[error("API error: {0}")]
     ApiError(String),
-    
+
     #[error("Invalid input: {0}")]
     InvalidInput(String),
-    
+
     #[error("Invalid OAuth state")]
     InvalidOAuthState,
-    
+
     #[error("Token expired")]
     TokenExpired,
-    
+
     #[error("Insufficient permissions: {0}")]
     InsufficientPermissions(String),
-    
+
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
-    
+
     #[error("Playlist not found: {0}")]
     PlaylistNotFound(String),
-    
+
     #[error("Track not found: {0}")]
     TrackNotFound(String),
-    
+
     #[error("Validation error: {0}")]
     ValidationError(String),
-    
+
     #[error("Network error: {0}")]
     NetworkError(#[from] reqwest::Error),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
-    
+
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
-    
+
     #[error("Generic error: {0}")]
     Generic(String),
 }
@@ -175,8 +175,9 @@ mod tests {
         };
 
         let serialized = serde_json::to_string(&track).expect("Should serialize");
-        let deserialized: SpotifyTrack = serde_json::from_str(&serialized).expect("Should deserialize");
-        
+        let deserialized: SpotifyTrack =
+            serde_json::from_str(&serialized).expect("Should deserialize");
+
         assert_eq!(track.id, deserialized.id);
         assert_eq!(track.name, deserialized.name);
         assert_eq!(track.artists, deserialized.artists);
@@ -192,14 +193,17 @@ mod tests {
             is_public: true,
             owner_id: "spotify".to_string(),
             owner_display_name: "Spotify".to_string(),
-            image_url: Some("https://i.scdn.co/image/ab67706f00000003c13b4f1dffebed6b639c6ef4".to_string()),
+            image_url: Some(
+                "https://i.scdn.co/image/ab67706f00000003c13b4f1dffebed6b639c6ef4".to_string(),
+            ),
             external_url: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M".to_string(),
             tracks: None,
         };
 
         let serialized = serde_json::to_string(&playlist).expect("Should serialize");
-        let deserialized: SpotifyPlaylist = serde_json::from_str(&serialized).expect("Should deserialize");
-        
+        let deserialized: SpotifyPlaylist =
+            serde_json::from_str(&serialized).expect("Should deserialize");
+
         assert_eq!(playlist.id, deserialized.id);
         assert_eq!(playlist.name, deserialized.name);
         assert_eq!(playlist.track_count, deserialized.track_count);
@@ -216,7 +220,7 @@ mod tests {
         }"#;
 
         let token: TokenResponse = serde_json::from_str(token_json).expect("Should deserialize");
-        
+
         assert_eq!(token.access_token, "BQDYPfKKX5sYI123example");
         assert_eq!(token.token_type, "Bearer");
         assert_eq!(token.scope, "playlist-read-private");

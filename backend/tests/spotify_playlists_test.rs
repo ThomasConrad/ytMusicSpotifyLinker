@@ -16,13 +16,23 @@ use playlist_linker::api::Router;
 use playlist_linker::app::spotify::{SpotifyPlaylistService, SpotifySyncService};
 use playlist_linker::app::Watcher;
 
-async fn setup_test_server_with_spotify_env() -> Result<(SocketAddr, SqlitePool, HashMap<String, String>)> {
+async fn setup_test_server_with_spotify_env(
+) -> Result<(SocketAddr, SqlitePool, HashMap<String, String>)> {
     // Set up environment variables for testing
     let mut env_vars = HashMap::new();
-    env_vars.insert("SPOTIFY_CLIENT_ID".to_string(), "test_client_id".to_string());
-    env_vars.insert("SPOTIFY_CLIENT_SECRET".to_string(), "test_client_secret".to_string());
-    env_vars.insert("SPOTIFY_REDIRECT_URI".to_string(), "http://localhost:3000/api/spotify/auth/callback".to_string());
-    
+    env_vars.insert(
+        "SPOTIFY_CLIENT_ID".to_string(),
+        "test_client_id".to_string(),
+    );
+    env_vars.insert(
+        "SPOTIFY_CLIENT_SECRET".to_string(),
+        "test_client_secret".to_string(),
+    );
+    env_vars.insert(
+        "SPOTIFY_REDIRECT_URI".to_string(),
+        "http://localhost:3000/api/spotify/auth/callback".to_string(),
+    );
+
     // Set environment variables
     for (key, value) in &env_vars {
         std::env::set_var(key, value);
@@ -47,9 +57,7 @@ async fn setup_test_server_with_spotify_env() -> Result<(SocketAddr, SqlitePool,
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::days(1)));
 
-    let _app = ServiceBuilder::new()
-        .layer(session_layer)
-        .service(router);
+    let _app = ServiceBuilder::new().layer(session_layer).service(router);
 
     // Bind to an available port
     let listener = TcpListener::bind("0.0.0.0:0").await?;
@@ -123,7 +131,7 @@ async fn test_spotify_playlist_operations() -> Result<()> {
     let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'playlist_user'")
         .fetch_one(&pool)
         .await?;
-    
+
     let user_id: i64 = user_record.id;
     sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
@@ -196,7 +204,10 @@ async fn test_playlist_request_validation() -> Result<()> {
     if response.status().is_success() {
         let playlist_response: serde_json::Value = response.json().await?;
         if playlist_response["success"].as_bool() == Some(false) {
-            assert!(playlist_response["error"].as_str().unwrap().contains("empty"));
+            assert!(playlist_response["error"]
+                .as_str()
+                .unwrap()
+                .contains("empty"));
         }
     }
 
@@ -343,7 +354,9 @@ mod playlist_service_tests {
         );
 
         // Test getting non-existent playlist
-        let result = service.get_playlist_from_database("non_existent_playlist").await;
+        let result = service
+            .get_playlist_from_database("non_existent_playlist")
+            .await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -494,11 +507,11 @@ mod integration_tests {
 
         if response.status().is_success() {
             let playlist_response: serde_json::Value = response.json().await?;
-            
+
             // Should have required fields
             assert!(playlist_response.get("success").is_some());
             assert!(playlist_response.get("playlists").is_some());
-            
+
             if let Some(playlists) = playlist_response["playlists"].as_array() {
                 // If there are playlists, they should have the right structure
                 for playlist in playlists {

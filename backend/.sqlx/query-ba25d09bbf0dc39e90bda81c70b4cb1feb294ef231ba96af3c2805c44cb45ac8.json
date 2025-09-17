@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, service, external_id, name, description, total_tracks, is_public, owner_id, created_at, updated_at\n            FROM playlists \n            WHERE service = 'spotify' AND external_id = ?\n            ",
+  "query": "\n            SELECT id, service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at\n            FROM songs \n            WHERE service = ?1 AND external_id = ?2\n            ",
   "describe": {
     "columns": [
       {
@@ -19,27 +19,27 @@
         "type_info": "Text"
       },
       {
-        "name": "name",
+        "name": "title",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "description",
+        "name": "artist",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "total_tracks",
+        "name": "album",
         "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 6,
         "type_info": "Int4"
       },
       {
-        "name": "is_public",
-        "ordinal": 6,
-        "type_info": "Bool"
-      },
-      {
-        "name": "owner_id",
+        "name": "songlink_data",
         "ordinal": 7,
         "type_info": "Text"
       },
@@ -55,7 +55,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -63,12 +63,12 @@
       false,
       false,
       true,
-      false,
-      false,
+      true,
+      true,
       true,
       false,
       false
     ]
   },
-  "hash": "ff3f17581ba61bfe5c490b62e7ff522010b68da9ae885836169508e91511c8f4"
+  "hash": "ba25d09bbf0dc39e90bda81c70b4cb1feb294ef231ba96af3c2805c44cb45ac8"
 }

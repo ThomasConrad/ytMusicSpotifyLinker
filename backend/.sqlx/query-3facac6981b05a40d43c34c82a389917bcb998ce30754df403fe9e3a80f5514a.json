@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, \n                   is_active, sync_frequency, last_sync_at, created_at, updated_at\n            FROM watchers \n            WHERE id = ?\n            ",
+  "query": "\n            SELECT id, user_id, name, source_service, source_playlist_id, target_service, target_playlist_id, \n                   is_active, sync_frequency, last_sync_at, created_at, updated_at\n            FROM watchers \n            WHERE user_id = ?1 \n            ORDER BY created_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -46,7 +46,7 @@
       {
         "name": "sync_frequency",
         "ordinal": 8,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "last_sync_at",
@@ -75,12 +75,12 @@
       false,
       false,
       true,
+      false,
+      false,
       true,
-      true,
-      true,
-      true,
-      true
+      false,
+      false
     ]
   },
-  "hash": "5d0733037bca9cdc51f4987cb445cc9aa3e931c6c413be9aaefde614d6a803db"
+  "hash": "3facac6981b05a40d43c34c82a389917bcb998ce30754df403fe9e3a80f5514a"
 }

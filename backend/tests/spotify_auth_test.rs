@@ -18,13 +18,23 @@ use playlist_linker::api::Router;
 use playlist_linker::app::Watcher;
 use playlist_linker::users::{database, Backend};
 
-async fn setup_test_server_with_spotify_env() -> Result<(SocketAddr, SqlitePool, HashMap<String, String>)> {
+async fn setup_test_server_with_spotify_env(
+) -> Result<(SocketAddr, SqlitePool, HashMap<String, String>)> {
     // Set up environment variables for testing
     let mut env_vars = HashMap::new();
-    env_vars.insert("SPOTIFY_CLIENT_ID".to_string(), "test_client_id".to_string());
-    env_vars.insert("SPOTIFY_CLIENT_SECRET".to_string(), "test_client_secret".to_string());
-    env_vars.insert("SPOTIFY_REDIRECT_URI".to_string(), "http://localhost:3000/api/spotify/auth/callback".to_string());
-    
+    env_vars.insert(
+        "SPOTIFY_CLIENT_ID".to_string(),
+        "test_client_id".to_string(),
+    );
+    env_vars.insert(
+        "SPOTIFY_CLIENT_SECRET".to_string(),
+        "test_client_secret".to_string(),
+    );
+    env_vars.insert(
+        "SPOTIFY_REDIRECT_URI".to_string(),
+        "http://localhost:3000/api/spotify/auth/callback".to_string(),
+    );
+
     // Set environment variables
     for (key, value) in &env_vars {
         std::env::set_var(key, value);
@@ -119,8 +129,14 @@ async fn test_spotify_auth_start_success() -> Result<()> {
     let auth_response: serde_json::Value = response.json().await?;
     assert_eq!(auth_response["success"], true);
     assert!(auth_response["auth_url"].is_string());
-    assert!(auth_response["auth_url"].as_str().unwrap().contains("accounts.spotify.com"));
-    assert!(auth_response["auth_url"].as_str().unwrap().contains("client_id=test_client_id"));
+    assert!(auth_response["auth_url"]
+        .as_str()
+        .unwrap()
+        .contains("accounts.spotify.com"));
+    assert!(auth_response["auth_url"]
+        .as_str()
+        .unwrap()
+        .contains("client_id=test_client_id"));
 
     Ok(())
 }
@@ -155,7 +171,10 @@ async fn test_spotify_auth_callback_success() -> Result<()> {
     let spotify_server = MockServer::start_async().await;
 
     // Override redirect URI to use mock server
-    std::env::set_var("SPOTIFY_REDIRECT_URI", format!("{}/callback", spotify_server.base_url()));
+    std::env::set_var(
+        "SPOTIFY_REDIRECT_URI",
+        format!("{}/callback", spotify_server.base_url()),
+    );
 
     // Mock the Spotify token endpoint
     let token_mock = spotify_server.mock_async(|when, then| {
@@ -177,13 +196,13 @@ async fn test_spotify_auth_callback_success() -> Result<()> {
         .get(format!("{}/api/spotify/auth/start", base_url))
         .send()
         .await?;
-    
+
     assert!(start_response.status().is_success());
 
     // Start the OAuth flow to get proper state
     let start_response_body: serde_json::Value = start_response.json().await?;
     let auth_url = start_response_body["auth_url"].as_str().unwrap();
-    
+
     // Extract state from the auth URL
     let url = url::Url::parse(auth_url).unwrap();
     let query_pairs: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
@@ -191,12 +210,20 @@ async fn test_spotify_auth_callback_success() -> Result<()> {
 
     // Test callback with valid code and state
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?code=test_auth_code&state={}", base_url, state))
+        .get(format!(
+            "{}/api/spotify/auth/callback?code=test_auth_code&state={}",
+            base_url, state
+        ))
         .send()
         .await?;
 
     assert_eq!(response.status().as_u16(), 302); // Should redirect
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("/dashboard"));
     assert!(location.contains("spotify_connected=true"));
 
@@ -219,33 +246,57 @@ async fn test_spotify_auth_callback_error_cases() -> Result<()> {
 
     // Test callback with OAuth error
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?error=access_denied", base_url))
+        .get(format!(
+            "{}/api/spotify/auth/callback?error=access_denied",
+            base_url
+        ))
         .send()
         .await?;
 
     assert_eq!(response.status().as_u16(), 302);
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("/dashboard"));
     assert!(location.contains("error=oauth_denied"));
 
     // Test callback without code
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?state=test_state", base_url))
+        .get(format!(
+            "{}/api/spotify/auth/callback?state=test_state",
+            base_url
+        ))
         .send()
         .await?;
 
     assert_eq!(response.status().as_u16(), 302);
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("error=no_code"));
 
     // Test callback without state
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?code=test_code", base_url))
+        .get(format!(
+            "{}/api/spotify/auth/callback?code=test_code",
+            base_url
+        ))
         .send()
         .await?;
 
     assert_eq!(response.status().as_u16(), 302);
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("error=no_state"));
 
     Ok(())
@@ -289,18 +340,20 @@ async fn test_spotify_auth_status_authenticated() -> Result<()> {
     let spotify_server = MockServer::start_async().await;
 
     // Mock the Spotify user profile endpoint
-    let profile_mock = spotify_server.mock_async(|when, then| {
-        when.method(GET)
-            .path("/v1/me")
-            .header("authorization", "Bearer mock_token_456");
-        then.status(200).json_body(json!({
-            "id": "spotify_test_user",
-            "display_name": "Test Spotify User",
-            "email": "test@spotify.com",
-            "followers": {"total": 42},
-            "product": "premium"
-        }));
-    }).await;
+    let profile_mock = spotify_server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/v1/me")
+                .header("authorization", "Bearer mock_token_456");
+            then.status(200).json_body(json!({
+                "id": "spotify_test_user",
+                "display_name": "Test Spotify User",
+                "email": "test@spotify.com",
+                "followers": {"total": 42},
+                "product": "premium"
+            }));
+        })
+        .await;
 
     // Create authenticated user
     create_authenticated_user(&client, &base_url, "auth_status_user").await?;
@@ -309,7 +362,7 @@ async fn test_spotify_auth_status_authenticated() -> Result<()> {
     let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'auth_status_user'")
         .fetch_one(&pool)
         .await?;
-    
+
     sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
          VALUES (?, 'spotify', 'mock_token_456', 'mock_refresh_456', datetime('now', '+1 hour'), 'user-read-private')",
@@ -331,10 +384,13 @@ async fn test_spotify_auth_status_authenticated() -> Result<()> {
     let status_response: serde_json::Value = response.json().await?;
     assert_eq!(status_response["success"], true);
     assert_eq!(status_response["authenticated"], true);
-    
+
     if status_response["user_profile"].is_object() {
         assert_eq!(status_response["user_profile"]["id"], "spotify_test_user");
-        assert_eq!(status_response["user_profile"]["display_name"], "Test Spotify User");
+        assert_eq!(
+            status_response["user_profile"]["display_name"],
+            "Test Spotify User"
+        );
         assert_eq!(status_response["user_profile"]["premium"], true);
     }
 
@@ -359,7 +415,7 @@ async fn test_spotify_auth_disconnect() -> Result<()> {
     let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'disconnect_user'")
         .fetch_one(&pool)
         .await?;
-    
+
     sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
          VALUES (?, 'spotify', 'mock_token_789', 'mock_refresh_789', datetime('now', '+1 hour'), 'user-read-private')",
@@ -377,7 +433,10 @@ async fn test_spotify_auth_disconnect() -> Result<()> {
     assert!(response.status().is_success());
     let disconnect_response: serde_json::Value = response.json().await?;
     assert_eq!(disconnect_response["success"], true);
-    assert!(disconnect_response["message"].as_str().unwrap().contains("Successfully disconnected"));
+    assert!(disconnect_response["message"]
+        .as_str()
+        .unwrap()
+        .contains("Successfully disconnected"));
 
     // Verify credentials were removed from database
     let count = sqlx::query!(
@@ -404,14 +463,16 @@ async fn test_spotify_test_connection() -> Result<()> {
     let spotify_server = MockServer::start_async().await;
 
     // Mock successful connection test
-    let test_mock = spotify_server.mock_async(|when, then| {
-        when.method(GET)
-            .path("/v1/me")
-            .header("authorization", "Bearer test_connection_token");
-        then.status(200).json_body(json!({
-            "id": "test_connection_user"
-        }));
-    }).await;
+    let test_mock = spotify_server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/v1/me")
+                .header("authorization", "Bearer test_connection_token");
+            then.status(200).json_body(json!({
+                "id": "test_connection_user"
+            }));
+        })
+        .await;
 
     // Create authenticated user
     create_authenticated_user(&client, &base_url, "connection_test_user").await?;
@@ -420,7 +481,7 @@ async fn test_spotify_test_connection() -> Result<()> {
     let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'connection_test_user'")
         .fetch_one(&pool)
         .await?;
-    
+
     sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
          VALUES (?, 'spotify', 'test_connection_token', 'test_refresh_token', datetime('now', '+1 hour'), 'user-read-private')",
@@ -441,7 +502,10 @@ async fn test_spotify_test_connection() -> Result<()> {
     assert!(response.status().is_success());
     let test_response: serde_json::Value = response.json().await?;
     assert_eq!(test_response["success"], true);
-    assert!(test_response["message"].as_str().unwrap().contains("working"));
+    assert!(test_response["message"]
+        .as_str()
+        .unwrap()
+        .contains("working"));
 
     // Verify the test endpoint was called
     test_mock.assert_async().await;
@@ -461,41 +525,47 @@ async fn test_token_refresh_flow() -> Result<()> {
     let spotify_server = MockServer::start_async().await;
 
     // Mock token refresh endpoint
-    let refresh_mock = spotify_server.mock_async(|when, then| {
-        when.method(POST)
-            .path("/api/token")
-            .body_contains("refresh_token=expired_refresh_token");
-        then.status(200).json_body(json!({
-            "access_token": "new_access_token",
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "refresh_token": "new_refresh_token",
-            "scope": "user-read-private"
-        }));
-    }).await;
+    let refresh_mock = spotify_server
+        .mock_async(|when, then| {
+            when.method(POST)
+                .path("/api/token")
+                .body_contains("refresh_token=expired_refresh_token");
+            then.status(200).json_body(json!({
+                "access_token": "new_access_token",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "refresh_token": "new_refresh_token",
+                "scope": "user-read-private"
+            }));
+        })
+        .await;
 
     // Mock profile endpoint that initially fails with expired token, then succeeds
-    let profile_fail_mock = spotify_server.mock_async(|when, then| {
-        when.method(GET)
-            .path("/v1/me")
-            .header("authorization", "Bearer expired_token");
-        then.status(401).json_body(json!({
-            "error": {
-                "status": 401,
-                "message": "The access token expired"
-            }
-        }));
-    }).await;
+    let profile_fail_mock = spotify_server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/v1/me")
+                .header("authorization", "Bearer expired_token");
+            then.status(401).json_body(json!({
+                "error": {
+                    "status": 401,
+                    "message": "The access token expired"
+                }
+            }));
+        })
+        .await;
 
-    let profile_success_mock = spotify_server.mock_async(|when, then| {
-        when.method(GET)
-            .path("/v1/me")
-            .header("authorization", "Bearer new_access_token");
-        then.status(200).json_body(json!({
-            "id": "refresh_test_user",
-            "display_name": "Refresh Test User"
-        }));
-    }).await;
+    let profile_success_mock = spotify_server
+        .mock_async(|when, then| {
+            when.method(GET)
+                .path("/v1/me")
+                .header("authorization", "Bearer new_access_token");
+            then.status(200).json_body(json!({
+                "id": "refresh_test_user",
+                "display_name": "Refresh Test User"
+            }));
+        })
+        .await;
 
     // Create authenticated user
     create_authenticated_user(&client, &base_url, "refresh_user").await?;
@@ -504,7 +574,7 @@ async fn test_token_refresh_flow() -> Result<()> {
     let user_record = sqlx::query!("SELECT id FROM users WHERE username = 'refresh_user'")
         .fetch_one(&pool)
         .await?;
-    
+
     sqlx::query!(
         "INSERT INTO user_credentials (user_id, service, access_token, refresh_token, expires_at, token_scope) 
          VALUES (?, 'spotify', 'expired_token', 'expired_refresh_token', datetime('now', '-1 hour'), 'user-read-private')",
@@ -565,23 +635,39 @@ async fn test_security_state_validation() -> Result<()> {
 
     // Test callback with invalid state (should fail)
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?code=test_code&state={}", base_url, invalid_state))
+        .get(format!(
+            "{}/api/spotify/auth/callback?code=test_code&state={}",
+            base_url, invalid_state
+        ))
         .send()
         .await?;
 
     assert_eq!(response.status().as_u16(), 302);
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("error=auth_failed") || location.contains("error=no_state"));
 
     // Test callback with valid state format but no auth flow started
     let response = client
-        .get(format!("{}/api/spotify/auth/callback?code=test_code&state={}", base_url, valid_state))
+        .get(format!(
+            "{}/api/spotify/auth/callback?code=test_code&state={}",
+            base_url, valid_state
+        ))
         .send()
         .await?;
 
     // This should also fail as no auth flow was actually started
     assert_eq!(response.status().as_u16(), 302);
-    let location = response.headers().get("location").unwrap().to_str().unwrap();
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(location.contains("error=auth_failed"));
 
     Ok(())

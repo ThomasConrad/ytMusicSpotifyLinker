@@ -26,17 +26,17 @@
       {
         "name": "songs_added",
         "ordinal": 4,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "songs_removed",
         "ordinal": 5,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "songs_failed",
         "ordinal": 6,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "error_message",
@@ -58,15 +58,15 @@
       "Right": 3
     },
     "nullable": [
-      true,
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       true,
-      true,
-      true,
-      true,
-      true,
+      false,
       true
     ]
   },

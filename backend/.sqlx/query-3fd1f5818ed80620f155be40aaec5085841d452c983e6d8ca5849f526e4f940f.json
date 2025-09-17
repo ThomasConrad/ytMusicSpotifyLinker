@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO sync_operations (watcher_id, operation_type, status, started_at)\n            VALUES (?, ?, 'pending', ?)\n            RETURNING id, watcher_id, operation_type, status, songs_added, songs_removed, songs_failed, error_message, started_at, completed_at\n            ",
+  "query": "\n            SELECT id, watcher_id, operation_type, status, \n                   songs_added as \"songs_added: i32\", \n                   songs_removed as \"songs_removed: i32\", \n                   songs_failed as \"songs_failed: i32\", \n                   error_message, started_at, completed_at\n            FROM sync_operations \n            WHERE watcher_id = ?1 \n            ORDER BY started_at DESC \n            LIMIT ?2\n            ",
   "describe": {
     "columns": [
       {
@@ -24,19 +24,19 @@
         "type_info": "Text"
       },
       {
-        "name": "songs_added",
+        "name": "songs_added: i32",
         "ordinal": 4,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
-        "name": "songs_removed",
+        "name": "songs_removed: i32",
         "ordinal": 5,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
-        "name": "songs_failed",
+        "name": "songs_failed: i32",
         "ordinal": 6,
-        "type_info": "Integer"
+        "type_info": "Int4"
       },
       {
         "name": "error_message",
@@ -55,20 +55,20 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 2
     },
     "nullable": [
-      true,
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       true,
-      true,
-      true,
-      true,
-      true,
+      false,
       true
     ]
   },
-  "hash": "b30e93764a75f6d948cd85660b2d55195130a5433d5a955291667bfdc75d0375"
+  "hash": "3fd1f5818ed80620f155be40aaec5085841d452c983e6d8ca5849f526e4f940f"
 }

@@ -277,7 +277,8 @@ impl UserService {
         if (self
             .watcher_repo
             .get_watcher_by_name(user_id, &request.name)
-            .await?).is_some()
+            .await?)
+            .is_some()
         {
             return Err(ServiceError::WatcherNameExists);
         }

@@ -1,4 +1,3 @@
-use futures_util::StreamExt;
 use rspotify::prelude::*;
 use rspotify::{AuthCodePkceSpotify, Config, Credentials, OAuth, Token};
 use sqlx::SqlitePool;

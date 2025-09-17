@@ -225,8 +225,7 @@ impl SpotifyPlaylistService {
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
         // Convert track IDs
-        let track_ids: Result<Vec<TrackId>, _> =
-            track_ids.iter().map(TrackId::from_id).collect();
+        let track_ids: Result<Vec<TrackId>, _> = track_ids.iter().map(TrackId::from_id).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 
@@ -271,8 +270,7 @@ impl SpotifyPlaylistService {
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid playlist ID: {}", e)))?;
 
         // Convert track IDs
-        let track_ids: Result<Vec<TrackId>, _> =
-            track_ids.iter().map(TrackId::from_id).collect();
+        let track_ids: Result<Vec<TrackId>, _> = track_ids.iter().map(TrackId::from_id).collect();
         let track_ids = track_ids
             .map_err(|e| SpotifyError::ValidationError(format!("Invalid track ID: {}", e)))?;
 
@@ -410,55 +408,55 @@ impl SpotifyPlaylistService {
         // Store tracks and relationships
         for (position, item) in tracks.iter().enumerate() {
             if let Some(rspotify::model::PlayableItem::Track(full_track)) = &item.track {
-                    // Store song
-                    let track_id_opt = full_track.id.as_ref().map(|id| id.id());
-                    let artist_name_opt = full_track.artists.first().map(|a| a.name.as_str());
-                    let duration_ms = full_track.duration.num_milliseconds();
+                // Store song
+                let track_id_opt = full_track.id.as_ref().map(|id| id.id());
+                let artist_name_opt = full_track.artists.first().map(|a| a.name.as_str());
+                let duration_ms = full_track.duration.num_milliseconds();
 
-                    sqlx::query!(
-                        r#"
+                sqlx::query!(
+                    r#"
                         INSERT OR REPLACE INTO songs 
                         (service, external_id, title, artist, album, duration_ms, updated_at)
                         VALUES ('spotify', ?, ?, ?, ?, ?, ?)
                         "#,
-                        track_id_opt,
-                        full_track.name,
-                        artist_name_opt,
-                        full_track.album.name,
-                        duration_ms,
+                    track_id_opt,
+                    full_track.name,
+                    artist_name_opt,
+                    full_track.album.name,
+                    duration_ms,
+                    now
+                )
+                .execute(&self.db)
+                .await
+                .map_err(SpotifyError::DatabaseError)?;
+
+                // Get song database ID
+                if let Some(track_id) = &full_track.id {
+                    let track_id_str = track_id.id();
+                    let song_record = sqlx::query!(
+                        "SELECT id FROM songs WHERE service = 'spotify' AND external_id = ?",
+                        track_id_str
+                    )
+                    .fetch_one(&self.db)
+                    .await
+                    .map_err(SpotifyError::DatabaseError)?;
+
+                    // Create playlist-song relationship
+                    let position_i64 = position as i64;
+                    sqlx::query!(
+                        r#"
+                            INSERT INTO playlist_songs (playlist_id, song_id, position, added_at)
+                            VALUES (?, ?, ?, ?)
+                            "#,
+                        playlist_record.id,
+                        song_record.id,
+                        position_i64,
                         now
                     )
                     .execute(&self.db)
                     .await
                     .map_err(SpotifyError::DatabaseError)?;
-
-                    // Get song database ID
-                    if let Some(track_id) = &full_track.id {
-                        let track_id_str = track_id.id();
-                        let song_record = sqlx::query!(
-                            "SELECT id FROM songs WHERE service = 'spotify' AND external_id = ?",
-                            track_id_str
-                        )
-                        .fetch_one(&self.db)
-                        .await
-                        .map_err(SpotifyError::DatabaseError)?;
-
-                        // Create playlist-song relationship
-                        let position_i64 = position as i64;
-                        sqlx::query!(
-                            r#"
-                            INSERT INTO playlist_songs (playlist_id, song_id, position, added_at)
-                            VALUES (?, ?, ?, ?)
-                            "#,
-                            playlist_record.id,
-                            song_record.id,
-                            position_i64,
-                            now
-                        )
-                        .execute(&self.db)
-                        .await
-                        .map_err(SpotifyError::DatabaseError)?;
-                    }
+                }
             }
         }
 

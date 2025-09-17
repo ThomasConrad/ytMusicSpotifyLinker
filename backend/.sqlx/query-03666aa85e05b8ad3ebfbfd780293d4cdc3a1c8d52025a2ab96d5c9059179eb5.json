@@ -34,19 +34,19 @@
         "type_info": "Datetime"
       },
       {
-        "name": "created_at",
+        "name": "token_scope",
         "ordinal": 6,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
-        "name": "updated_at",
+        "name": "created_at",
         "ordinal": 7,
         "type_info": "Datetime"
       },
       {
-        "name": "token_scope",
+        "name": "updated_at",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Datetime"
       }
     ],
     "parameters": {

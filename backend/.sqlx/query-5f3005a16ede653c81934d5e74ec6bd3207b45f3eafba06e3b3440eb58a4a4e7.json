@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO songs (service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at)\n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, date('now'), date('now'))\n            ON CONFLICT(service, external_id) DO UPDATE SET\n                title = excluded.title,\n                artist = excluded.artist,\n                album = excluded.album,\n                duration_ms = excluded.duration_ms,\n                songlink_data = excluded.songlink_data,\n                updated_at = date('now')\n            RETURNING id, service, external_id, title, artist, album, duration_ms, songlink_data, created_at, updated_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "service",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "external_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "album",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 6,
+        "type_info": "Int4"
+      },
+      {
+        "name": "songlink_data",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5f3005a16ede653c81934d5e74ec6bd3207b45f3eafba06e3b3440eb58a4a4e7"
+}
